@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Do not make other commands for ipcrawler
+This are the only commands to exist with this applications:
+./ipcrawler -- this will auto build and run application
+./ipcrawler-install -- This will install all tools and dependencies needed for the application
