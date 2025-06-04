@@ -291,4 +291,14 @@ config/profiles/
 # Binary data
 *.bin
 *.dat
-*.dump 
+*.dump
+
+# Build outputs
+ipcrawler
+dist/
+*.exe
+
+# Cache and temporary directories
+.cache/
+misc/
+tools/ 
