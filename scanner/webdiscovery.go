@@ -551,9 +551,20 @@ func (w *WebDiscoveryEngine) detectTechnologies(result *WebResult) {
 func (w *WebDiscoveryEngine) runWhatweb(url string) []string {
 	var technologies []string
 
+	// Check if whatweb is available
+	if _, err := exec.LookPath("whatweb"); err != nil {
+		if w.Verbose {
+			fmt.Printf("⚠️  whatweb not found, skipping technology detection for %s\n", url)
+		}
+		return technologies
+	}
+
 	cmd := exec.Command("whatweb", "--no-errors", "-a", "3", "--color=never", url)
 	output, err := cmd.Output()
 	if err != nil {
+		if w.Verbose {
+			fmt.Printf("⚠️  whatweb failed for %s: %v\n", url, err)
+		}
 		return technologies
 	}
 

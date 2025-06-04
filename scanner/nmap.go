@@ -20,6 +20,7 @@ type NmapScanner struct {
 	Timeout          time.Duration
 	Verbose          bool
 	ProgressCallback ProgressCallback
+	ToolAvailability *ToolAvailability
 }
 
 // ScanResult represents the result of a network scan
@@ -154,9 +155,10 @@ func (s *ScanResultTracker) TrackCommand(tool, command string, args []string, st
 // NewNmapScanner creates a new nmap scanner instance
 func NewNmapScanner() *NmapScanner {
 	return &NmapScanner{
-		BinaryPath: "/usr/bin/nmap",
-		Timeout:    time.Minute * 10,
-		Verbose:    false,
+		BinaryPath:       "/usr/bin/nmap",
+		Timeout:          time.Minute * 10,
+		Verbose:          false,
+		ToolAvailability: NewToolAvailability(),
 	}
 }
 
@@ -308,6 +310,20 @@ func (n *NmapScanner) Scan(target string, options ScanOptions) (*ScanResult, err
 		Commands:  []CommandInfo{},
 	}
 
+	// Add tool availability information to metadata
+	n.ToolAvailability.CheckAllTools()
+	result.Metadata["available_tools"] = strings.Join(n.ToolAvailability.GetAvailableTools(), ",")
+	result.Metadata["missing_tools"] = strings.Join(n.ToolAvailability.GetMissingTools(), ",")
+
+	// Add capability information
+	capabilities := n.ToolAvailability.GetCapabilities()
+	for capability, available := range capabilities {
+		result.Metadata["capability_"+capability] = fmt.Sprintf("%t", available)
+	}
+
+	// Debug: Store the command being executed
+	result.Metadata["nmap_command"] = "nmap " + strings.Join(args, " ")
+
 	// Execute nmap command with tracking
 	nmapStartTime := time.Now()
 	cmd := exec.Command("nmap", args...)
@@ -404,7 +420,14 @@ func (n *NmapScanner) buildNmapArgs(target string, options ScanOptions) []string
 
 	// Output options
 	args = append(args, "-oN", "-") // Normal output to stdout
-	args = append(args, "--open")   // Only show open ports
+
+	// Only show open ports for specific scan types to avoid missing filtered/closed ports
+	// For HTB and CTF environments, we want to see filtered ports as they may indicate services
+	if options.ScanType == "quick" || options.ScanType == "web" {
+		// Keep --open for quick scans to reduce noise
+		args = append(args, "--open")
+	}
+	// For other scan types (full, aggressive, etc.), show all port states
 
 	// Target
 	args = append(args, target)
@@ -415,6 +438,12 @@ func (n *NmapScanner) buildNmapArgs(target string, options ScanOptions) []string
 // parseNmapOutput parses nmap output and populates the scan result
 func (n *NmapScanner) parseNmapOutput(result *ScanResult, output string) error {
 	scanner := bufio.NewScanner(strings.NewReader(output))
+
+	// Debug: Store the raw output for troubleshooting
+	if result.Metadata == nil {
+		result.Metadata = make(map[string]string)
+	}
+	result.Metadata["raw_nmap_output"] = output
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -427,7 +456,7 @@ func (n *NmapScanner) parseNmapOutput(result *ScanResult, output string) error {
 			}
 		}
 
-		// Parse open ports
+		// Parse ports (both TCP and UDP, all states)
 		if strings.Contains(line, "/tcp") || strings.Contains(line, "/udp") {
 			port := n.parsePortLine(line)
 			if port != nil {
@@ -448,6 +477,25 @@ func (n *NmapScanner) parseNmapOutput(result *ScanResult, output string) error {
 			result.Metadata["service_info"] = serviceInfo
 		}
 	}
+
+	// Debug: Add parsing statistics to metadata
+	result.Metadata["total_ports_found"] = fmt.Sprintf("%d", len(result.Ports))
+
+	// Count ports by state for debugging
+	var openCount, filteredCount, closedCount int
+	for _, port := range result.Ports {
+		switch port.State {
+		case "open":
+			openCount++
+		case "filtered":
+			filteredCount++
+		case "closed":
+			closedCount++
+		}
+	}
+	result.Metadata["open_ports_count"] = fmt.Sprintf("%d", openCount)
+	result.Metadata["filtered_ports_count"] = fmt.Sprintf("%d", filteredCount)
+	result.Metadata["closed_ports_count"] = fmt.Sprintf("%d", closedCount)
 
 	return nil
 }
@@ -559,7 +607,9 @@ func (n *NmapScanner) performAdditionalDiscovery(result *ScanResult, target stri
 	n.updateProgress(1, "", "Reconnaissance complete", true)
 
 	// Web discovery for HTTP/HTTPS services
-	webPorts := GetWebPorts(result.OpenPorts)
+	// Include both open and filtered ports for web discovery (HTB machines often have filtered web ports)
+	allRelevantPorts := append(result.OpenPorts, result.FilteredPorts...)
+	webPorts := GetWebPorts(allRelevantPorts)
 	if len(webPorts) > 0 {
 		n.updateProgress(3, "", "Starting web discovery", false)
 		webEngine := NewWebDiscoveryEngine()
