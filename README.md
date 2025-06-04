@@ -55,20 +55,43 @@ cd ipcrawler
 # Run the installer (checks dependencies and installs tools)
 ./ipcrawler-installer
 
-# Run the application
-./ipcrawler
+# For development (requires Go)
+./run.sh
+
+# For production (creates binary)
+make build && make install
+ipcrawler
 ```
 
-### Manual Installation
+### Build Options
+
+**Development (requires Go installed):**
 ```bash
-# Install Go dependencies
-go mod tidy
+./run.sh                    # Quick development run
+make dev                    # Alternative development mode
+make dev ARGS="--help"      # Pass arguments in development
+```
 
-# Build the application
-go build -o bin/ipcrawler .
+**Production (standalone binaries):**
+```bash
+make build                  # Build for current platform
+make install                # Install to /usr/local/bin
+ipcrawler                   # Run from anywhere
+make uninstall              # Remove from system
+```
 
-# Run the application
-./bin/ipcrawler
+**Cross-platform builds:**
+```bash
+make build-all              # Build for all platforms (Linux, macOS, Windows)
+make package               # Create distribution packages
+ls dist/                   # View all built binaries
+```
+
+**Quality assurance:**
+```bash
+make audit                  # Run tests, linting, formatting
+make test                   # Run tests only
+make fmt                   # Format code only
 ```
 
 ## Usage

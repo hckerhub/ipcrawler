@@ -11,3 +11,5 @@ This are the only commands to exist with this applications:
 Do not add or remove features without asking me
 
 Keep the names of folders and files simple and well organized
+
+The code should be placed in their repective file, if file for that does not exist create it but only after searching codebase.

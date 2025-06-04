@@ -1,0 +1,6 @@
+.cursor/
+.cache/*
+build/
+dist/
+coverage.out
+*.log

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"ipcrawler/cmd"
-	"ipcrawler/ui/styles"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+
+	"ipcrawler/cmd"
+	"ipcrawler/ui/styles"
 )
 
 func main() {

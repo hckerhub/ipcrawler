@@ -171,9 +171,10 @@ func (m *ScanModel) startScan() tea.Cmd {
 
 // ScanStartedMsg represents a scan start message
 type ScanStartedMsg struct {
-	IP       string
-	Ports    string
-	ScanType string
+	IP         string
+	Ports      string
+	ScanType   string
+	Aggressive bool
 }
 
 // View renders the scan model
