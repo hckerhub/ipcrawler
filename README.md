@@ -42,7 +42,7 @@ IPCrawler is a comprehensive IP reconnaissance and network scanning tool built w
 ## Installation
 
 ### Prerequisites
-- Go 1.21 or higher
+- Go 1.19 or higher (1.21+ recommended)
 - Unix-like operating system (Linux, macOS)
 - Terminal with 256-color support
 
@@ -62,6 +62,26 @@ cd ipcrawler
 make build && make install
 ipcrawler
 ```
+
+### Smart Installation (All Environments)
+The Makefile automatically detects your system and applies the best installation approach:
+```bash
+# Smart install - auto-detects Go version, system type, and applies fixes
+make install
+
+# Quick install for HTB/CTF (minimal checks, faster)
+make quick-install
+
+# Manual fallback (if Makefile has issues)
+go build -o ipcrawler && sudo cp ipcrawler /usr/local/bin/
+```
+
+**Auto-Detection Features:**
+- ✅ Detects Go version compatibility (handles 1.16+ through 1.24+)
+- ✅ Automatically patches `go.mod` for older Go versions
+- ✅ Detects HTB/Kali/Parrot environments
+- ✅ Handles permission requirements automatically
+- ✅ Provides fallback approaches for compatibility issues
 
 ### Build Options
 
