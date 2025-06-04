@@ -1,0 +1,140 @@
+# IPCrawler Configuration Example
+# Copy this file to ~/.ipcrawler/config.yaml to customize default behavior
+
+# Default scan settings
+default:
+  aggressive: false          # Enable aggressive scanning by default
+  verbose: false            # Enable verbose output by default
+  timeout: 300              # Default timeout in seconds
+  output_format: "summary"  # Default output format (summary, table, json)
+  output_dir: "./scans"     # Default directory for saving results
+
+# Scanning configuration
+scan:
+  # TCP port range (1-65535 for full scan, or specific ranges like "1-1000,8000-9000")
+  tcp_ports: "1-65535"
+  
+  # UDP ports to scan (comma-separated list of important ports)
+  udp_ports: "53,67,68,69,123,135,137,138,139,161,162,445,631,1434,1900,4500,5353"
+  
+  # Number of parallel threads for scanning
+  threads: 50
+  
+  # NMAP timing template (0-5, where 5 is most aggressive)
+  timing: 4
+  
+  # Additional NMAP options for advanced users
+  extra_nmap_options: ""
+
+# Vulnerability analysis settings
+vulnerability:
+  # Enable automatic vulnerability detection
+  enabled: true
+  
+  # Minimum severity to report (low, medium, high, critical)
+  min_severity: "low"
+  
+  # Include CVE references when available
+  include_cves: true
+  
+  # Include exploitation suggestions
+  include_suggestions: true
+
+# UI/TUI settings
+ui:
+  theme: "cyberpunk"        # UI theme (cyberpunk, matrix, hacker, classic)
+  animations: true          # Enable terminal animations
+  progress_bar_width: 40    # Width of progress bars
+  auto_refresh: true        # Auto-refresh during scanning
+  
+  # Color scheme customization
+  colors:
+    primary: "#00FF00"      # Matrix green
+    secondary: "#0080FF"    # Cyber blue
+    accent: "#FF6600"       # Orange
+    error: "#FF0000"        # Red
+    warning: "#FFFF00"      # Yellow
+    success: "#00FF00"      # Green
+
+# HTB-specific settings
+htb:
+  # Enable HTB-optimized scanning profiles
+  optimized: true
+  
+  # High-value ports for HTB machines
+  high_value_ports:
+    - 21    # FTP
+    - 22    # SSH
+    - 23    # Telnet
+    - 25    # SMTP
+    - 53    # DNS
+    - 80    # HTTP
+    - 110   # POP3
+    - 135   # RPC
+    - 139   # NetBIOS
+    - 143   # IMAP
+    - 389   # LDAP
+    - 443   # HTTPS
+    - 445   # SMB
+    - 993   # IMAPS
+    - 995   # POP3S
+    - 1433  # MSSQL
+    - 3306  # MySQL
+    - 3389  # RDP
+    - 5432  # PostgreSQL
+    - 5985  # WinRM HTTP
+    - 5986  # WinRM HTTPS
+    - 8080  # HTTP Alt
+    - 8443  # HTTPS Alt
+  
+  # Common HTB attack vectors to check
+  attack_vectors:
+    - "anonymous_ftp"
+    - "default_credentials"
+    - "web_vulnerabilities"
+    - "smb_misconfig"
+    - "weak_ssh"
+    - "dns_zone_transfer"
+    - "sql_injection"
+    - "directory_traversal"
+
+# Logging settings
+logging:
+  level: "info"             # Log level (debug, info, warn, error)
+  file: ""                  # Log file path (empty for stdout)
+  max_size: 100             # Max log file size in MB
+  max_backups: 3            # Number of backup log files
+  max_age: 28               # Max age of log files in days
+
+# Integration settings (for future features)
+integration:
+  # Metasploit integration
+  metasploit:
+    enabled: false
+    path: "/usr/share/metasploit-framework"
+  
+  # Burp Suite integration
+  burp:
+    enabled: false
+    proxy: "127.0.0.1:8080"
+  
+  # Custom tools
+  tools:
+    gobuster: "/usr/bin/gobuster"
+    dirb: "/usr/bin/dirb"
+    nikto: "/usr/bin/nikto"
+    sqlmap: "/usr/bin/sqlmap"
+
+# Performance tuning
+performance:
+  # Maximum memory usage in MB
+  max_memory: 512
+  
+  # Maximum CPU cores to use (0 = use all available)
+  max_cores: 0
+  
+  # Scan result caching
+  cache:
+    enabled: true
+    ttl: 3600             # Cache TTL in seconds
+    max_entries: 1000     # Maximum cache entries 
