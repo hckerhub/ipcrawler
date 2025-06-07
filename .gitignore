@@ -4,10 +4,16 @@
 
 # ===== MAKEFILE INSTALLED DIRECTORIES =====
 # These directories are created by 'make install' and should not be committed
-tools/                    # Cloned tool repositories (Go, Rust, Python tools)
-wordlists/               # Downloaded wordlist collections (SecLists, etc.)
-bin/                     # Local compiled binaries
-run-tool.sh              # Convenience script (generated, not tracked)
+/tools/                   # Cloned tool repositories (Go, Rust, Python tools)
+/wordlists/              # Downloaded wordlist collections (SecLists, etc.)
+/bin/                    # Local compiled binaries
+/run-tool.sh             # Convenience script (generated, not tracked)
+
+# Legacy patterns (in case above don't work)
+tools/
+wordlists/
+bin/
+run-tool.sh
 
 # Note: Go installation goes to ~/.local/go (outside this repo)
 # Rust installation goes to ~/.cargo (outside this repo)
