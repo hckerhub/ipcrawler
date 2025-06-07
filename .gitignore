@@ -7,6 +7,7 @@
 tools/                    # Cloned tool repositories (Go, Rust, Python tools)
 wordlists/               # Downloaded wordlist collections (SecLists, etc.)
 bin/                     # Local compiled binaries
+run-tool.sh              # Convenience script (generated, not tracked)
 
 # Note: Go installation goes to ~/.local/go (outside this repo)
 # Rust installation goes to ~/.cargo (outside this repo)
