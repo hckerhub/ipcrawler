@@ -53,10 +53,11 @@ help:
 	@echo ""
 	@echo "$(CYAN)Directory structure:$(RESET)"
 	@echo "  $(CURDIR)/tools/      - Cloned tool repositories"
+	@echo "  $(CURDIR)/bin/        - Locally built tool binaries"
 	@echo "  $(CURDIR)/wordlists/  - Downloaded wordlists"
-	@echo "  $(HOME)/.local/bin    - Installed tool binaries"
+	@echo "  $(HOME)/.local/bin    - Global tool binaries (fallback)"
 
-install: check-deps setup-dirs install-deps install-tools install-wordlists
+install: check-installation-status check-deps setup-dirs install-deps install-tools install-wordlists
 	$(call print_success,"ipcrawler installation completed!")
 	@echo ""
 	@echo "$(CYAN)📋 Next steps:$(RESET)"
@@ -66,6 +67,41 @@ install: check-deps setup-dirs install-deps install-tools install-wordlists
 	@echo "  3. Run 'make help' for available commands"
 
 # ===== DEPENDENCY CHECKING =====
+check-installation-status:
+	@echo "$(MAGENTA)🔍 Checking current installation status...$(RESET)"
+	@echo ""
+	@echo "$(CYAN)System Dependencies:$(RESET)"
+	@command -v git >/dev/null 2>&1 && echo "  $(GREEN)✅ git$(RESET)" || echo "  $(RED)❌ git$(RESET) - Required"
+	@command -v curl >/dev/null 2>&1 && echo "  $(GREEN)✅ curl$(RESET)" || echo "  $(RED)❌ curl$(RESET)"
+	@command -v wget >/dev/null 2>&1 && echo "  $(GREEN)✅ wget$(RESET)" || echo "  $(RED)❌ wget$(RESET)"
+	@command -v unzip >/dev/null 2>&1 && echo "  $(GREEN)✅ unzip$(RESET)" || echo "  $(RED)❌ unzip$(RESET)"
+	@command -v python3 >/dev/null 2>&1 && echo "  $(GREEN)✅ python3$(RESET)" || echo "  $(RED)❌ python3$(RESET)"
+	@command -v pip3 >/dev/null 2>&1 && echo "  $(GREEN)✅ pip3$(RESET)" || echo "  $(RED)❌ pip3$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Development Dependencies:$(RESET)"
+	@if command -v go >/dev/null 2>&1; then \
+		GO_CURRENT=$$(go version | cut -d' ' -f3 | sed 's/go//'); \
+		echo "  $(GREEN)✅ go $$GO_CURRENT$(RESET)"; \
+	else \
+		echo "  $(RED)❌ go$(RESET) - Will be installed"; \
+	fi
+	@command -v cargo >/dev/null 2>&1 && echo "  $(GREEN)✅ rust/cargo$(RESET)" || echo "  $(RED)❌ rust/cargo$(RESET) - Will be installed"
+	@echo ""
+	@echo "$(CYAN)Reconnaissance Tools:$(RESET)"
+	@(command -v naabu >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/naabu" ]) && echo "  $(GREEN)✅ naabu$(RESET)" || echo "  $(YELLOW)⏳ naabu$(RESET) - Will be installed"
+	@(command -v httpx >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/httpx" ]) && echo "  $(GREEN)✅ httpx$(RESET)" || echo "  $(YELLOW)⏳ httpx$(RESET) - Will be installed"
+	@(command -v subfinder >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/subfinder" ]) && echo "  $(GREEN)✅ subfinder$(RESET)" || echo "  $(YELLOW)⏳ subfinder$(RESET) - Will be installed"
+	@(command -v nuclei >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/nuclei" ]) && echo "  $(GREEN)✅ nuclei$(RESET)" || echo "  $(YELLOW)⏳ nuclei$(RESET) - Will be installed"
+	@(command -v amass >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/amass" ]) && echo "  $(GREEN)✅ amass$(RESET)" || echo "  $(YELLOW)⏳ amass$(RESET) - Will be installed"
+	@(command -v ffuf >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/ffuf" ]) && echo "  $(GREEN)✅ ffuf$(RESET)" || echo "  $(YELLOW)⏳ ffuf$(RESET) - Will be installed"
+	@(command -v feroxbuster >/dev/null 2>&1 || [ -f "$(LOCAL_BIN_DIR)/feroxbuster" ]) && echo "  $(GREEN)✅ feroxbuster$(RESET)" || echo "  $(YELLOW)⏳ feroxbuster$(RESET) - Will be installed"
+	@echo ""
+	@echo "$(CYAN)Wordlists:$(RESET)"
+	@[ -d "$(WORDLISTS_DIR)/SecLists" ] && echo "  $(GREEN)✅ SecLists$(RESET)" || echo "  $(YELLOW)⏳ SecLists$(RESET) - Will be downloaded"
+	@[ -f "$(WORDLISTS_DIR)/rockyou.txt" ] && echo "  $(GREEN)✅ rockyou.txt$(RESET)" || echo "  $(YELLOW)⏳ rockyou.txt$(RESET) - Will be downloaded"
+	@[ -d "$(WORDLISTS_DIR)/commonspeak2-wordlists" ] && echo "  $(GREEN)✅ commonspeak2$(RESET)" || echo "  $(YELLOW)⏳ commonspeak2$(RESET) - Will be downloaded"
+	@echo ""
+
 check-deps:
 	$(call print_status,"Checking system dependencies...")
 	@command -v git >/dev/null 2>&1 || ($(call print_error,"git is required but not installed") && exit 1)
@@ -87,15 +123,9 @@ install-deps: install-go install-system-deps install-rust
 install-go:
 	$(call print_status,"Checking Go installation...")
 	@if command -v go >/dev/null 2>&1; then \
-		GO_CURRENT_VERSION=$$(go version | grep -o 'go[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed 's/go//'); \
-		if [ "$$(printf '%s\n' "$(GO_VERSION)" "$$GO_CURRENT_VERSION" | sort -V | head -n1)" = "$(GO_VERSION)" ]; then \
-			$(call print_success,"Go $$GO_CURRENT_VERSION is already installed and meets minimum requirement"); \
-		else \
-			$(call print_warning,"Go $$GO_CURRENT_VERSION is outdated, installing Go $(GO_VERSION)..."); \
-			$(MAKE) download-go; \
-		fi; \
+		echo "$(GREEN)✅ Go is already installed$(RESET)"; \
 	else \
-		$(call print_status,"Go not found, installing Go $(GO_VERSION)..."); \
+		echo "$(CYAN)➡️  Go not found, installing Go $(GO_VERSION)...$(RESET)"; \
 		$(MAKE) download-go; \
 	fi
 
@@ -146,26 +176,26 @@ download-go:
 install-system-deps:
 	$(call print_status,"Installing system dependencies...")
 	@if command -v apt >/dev/null 2>&1; then \
-		$(call print_status,"Detected apt package manager (Debian/Ubuntu)"); \
+		echo "$(CYAN)➡️  Detected apt package manager (Debian/Ubuntu)$(RESET)"; \
 		sudo apt update && \
 		sudo apt install -y git build-essential curl wget unzip python3-pip; \
 	elif command -v pacman >/dev/null 2>&1; then \
-		$(call print_status,"Detected pacman package manager (Arch Linux)"); \
+		echo "$(CYAN)➡️  Detected pacman package manager (Arch Linux)$(RESET)"; \
 		sudo pacman -Sy --noconfirm git base-devel curl wget unzip python python-pip; \
 	elif command -v brew >/dev/null 2>&1; then \
-		$(call print_status,"Detected brew package manager (macOS)"); \
+		echo "$(CYAN)➡️  Detected brew package manager (macOS)$(RESET)"; \
 		brew install git curl wget unzip python3; \
 	elif command -v yum >/dev/null 2>&1; then \
-		$(call print_status,"Detected yum package manager (CentOS/RHEL)"); \
+		echo "$(CYAN)➡️  Detected yum package manager (CentOS/RHEL)$(RESET)"; \
 		sudo yum update -y && \
 		sudo yum install -y git gcc make curl wget unzip python3-pip; \
 	elif command -v dnf >/dev/null 2>&1; then \
-		$(call print_status,"Detected dnf package manager (Fedora)"); \
+		echo "$(CYAN)➡️  Detected dnf package manager (Fedora)$(RESET)"; \
 		sudo dnf update -y && \
 		sudo dnf install -y git gcc make curl wget unzip python3-pip; \
 	else \
-		$(call print_warning,"No supported package manager found, attempting manual installation..."); \
-		$(call print_status,"Please ensure git, curl, wget, unzip are installed manually"); \
+		echo "$(YELLOW)⚠️  No supported package manager found, attempting manual installation...$(RESET)"; \
+		echo "$(CYAN)➡️  Please ensure git, curl, wget, unzip are installed manually$(RESET)"; \
 	fi
 	$(call print_success,"System dependencies installed")
 
@@ -173,12 +203,12 @@ install-system-deps:
 install-rust:
 	$(call print_status,"Checking Rust installation...")
 	@if ! command -v cargo >/dev/null 2>&1; then \
-		$(call print_status,"Installing Rust toolchain..."); \
+		echo "$(CYAN)➡️  Installing Rust toolchain...$(RESET)"; \
 		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
-		$(call print_success,"Rust installed successfully"); \
-		$(call print_warning,"Please restart your terminal or run: source $$HOME/.cargo/env"); \
+		echo "$(GREEN)✅ Rust installed successfully$(RESET)"; \
+		echo "$(YELLOW)⚠️  Please restart your terminal or run: source $$HOME/.cargo/env$(RESET)"; \
 	else \
-		$(call print_success,"Rust is already installed"); \
+		echo "$(GREEN)✅ Rust is already installed$(RESET)"; \
 	fi
 
 # ===== TOOL INSTALLATION =====
@@ -188,129 +218,198 @@ install-tools: install-go-tools install-rust-tools install-python-tools install-
 install-go-tools:
 	$(call print_status,"Installing Go-based reconnaissance tools...")
 	
-	# ProjectDiscovery tools
-	@if ! command -v naabu >/dev/null 2>&1; then \
-		$(call print_status,"Installing naabu (fast port scanner)..."); \
-		go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest; \
+	# ProjectDiscovery tools - Build locally
+	@if [ ! -f "$(LOCAL_BIN_DIR)/naabu" ]; then \
+		echo "$(CYAN)➡️  Building naabu (fast port scanner)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/naabu" ]; then \
+			cd $(TOOLS_DIR)/naabu && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/naabu.git; \
+		fi; \
+		cd $(TOOLS_DIR)/naabu/cmd/naabu && go build -o $(LOCAL_BIN_DIR)/naabu .; \
 	fi
 	
-	@if ! command -v httpx >/dev/null 2>&1; then \
-		$(call print_status,"Installing httpx (HTTP probing tool)..."); \
-		go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/httpx" ]; then \
+		echo "$(CYAN)➡️  Building httpx (HTTP probing tool)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/httpx" ]; then \
+			cd $(TOOLS_DIR)/httpx && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/httpx.git; \
+		fi; \
+		cd $(TOOLS_DIR)/httpx/cmd/httpx && go build -o $(LOCAL_BIN_DIR)/httpx .; \
 	fi
 	
-	@if ! command -v subfinder >/dev/null 2>&1; then \
-		$(call print_status,"Installing subfinder (subdomain discovery)..."); \
-		go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/subfinder" ]; then \
+		echo "$(CYAN)➡️  Building subfinder (subdomain discovery)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/subfinder" ]; then \
+			cd $(TOOLS_DIR)/subfinder && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/subfinder.git; \
+		fi; \
+		cd $(TOOLS_DIR)/subfinder/v2/cmd/subfinder && go build -o $(LOCAL_BIN_DIR)/subfinder .; \
 	fi
 	
-	@if ! command -v dnsx >/dev/null 2>&1; then \
-		$(call print_status,"Installing dnsx (DNS toolkit)..."); \
-		go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/dnsx" ]; then \
+		echo "$(CYAN)➡️  Building dnsx (DNS toolkit)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/dnsx" ]; then \
+			cd $(TOOLS_DIR)/dnsx && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/dnsx.git; \
+		fi; \
+		cd $(TOOLS_DIR)/dnsx/cmd/dnsx && go build -o $(LOCAL_BIN_DIR)/dnsx .; \
 	fi
 	
-	@if ! command -v nuclei >/dev/null 2>&1; then \
-		$(call print_status,"Installing nuclei (vulnerability scanner)..."); \
-		go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/nuclei" ]; then \
+		echo "$(CYAN)➡️  Building nuclei (vulnerability scanner)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/nuclei" ]; then \
+			cd $(TOOLS_DIR)/nuclei && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/nuclei.git; \
+		fi; \
+		cd $(TOOLS_DIR)/nuclei/cmd/nuclei && go build -o $(LOCAL_BIN_DIR)/nuclei .; \
 	fi
 	
-	@if ! command -v katana >/dev/null 2>&1; then \
-		$(call print_status,"Installing katana (web crawler)..."); \
-		go install github.com/projectdiscovery/katana/cmd/katana@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/katana" ]; then \
+		echo "$(CYAN)➡️  Building katana (web crawler)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/katana" ]; then \
+			cd $(TOOLS_DIR)/katana && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/katana.git; \
+		fi; \
+		cd $(TOOLS_DIR)/katana/cmd/katana && go build -o $(LOCAL_BIN_DIR)/katana .; \
 	fi
 	
-	@if ! command -v shuffledns >/dev/null 2>&1; then \
-		$(call print_status,"Installing shuffledns (DNS bruteforcer)..."); \
-		go install -v github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/shuffledns" ]; then \
+		echo "$(CYAN)➡️  Building shuffledns (DNS bruteforcer)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/shuffledns" ]; then \
+			cd $(TOOLS_DIR)/shuffledns && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/shuffledns.git; \
+		fi; \
+		cd $(TOOLS_DIR)/shuffledns/cmd/shuffledns && go build -o $(LOCAL_BIN_DIR)/shuffledns .; \
 	fi
 	
-	@if ! command -v mapcidr >/dev/null 2>&1; then \
-		$(call print_status,"Installing mapcidr (CIDR manipulation)..."); \
-		go install -v github.com/projectdiscovery/mapcidr/cmd/mapcidr@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/mapcidr" ]; then \
+		echo "$(CYAN)➡️  Building mapcidr (CIDR manipulation)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/mapcidr" ]; then \
+			cd $(TOOLS_DIR)/mapcidr && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/mapcidr.git; \
+		fi; \
+		cd $(TOOLS_DIR)/mapcidr/cmd/mapcidr && go build -o $(LOCAL_BIN_DIR)/mapcidr .; \
 	fi
 	
-	@if ! command -v asnmap >/dev/null 2>&1; then \
-		$(call print_status,"Installing asnmap (ASN mapping)..."); \
-		go install github.com/projectdiscovery/asnmap/cmd/asnmap@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/asnmap" ]; then \
+		echo "$(CYAN)➡️  Building asnmap (ASN mapping)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/asnmap" ]; then \
+			cd $(TOOLS_DIR)/asnmap && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/projectdiscovery/asnmap.git; \
+		fi; \
+		cd $(TOOLS_DIR)/asnmap/cmd/asnmap && go build -o $(LOCAL_BIN_DIR)/asnmap .; \
 	fi
 	
 	# Other Go tools
-	@if ! command -v amass >/dev/null 2>&1; then \
-		$(call print_status,"Installing amass (subdomain enumeration)..."); \
-		go install -v github.com/owasp-amass/amass/v4/...@master; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/amass" ]; then \
+		echo "$(CYAN)➡️  Building amass (subdomain enumeration)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/amass" ]; then \
+			cd $(TOOLS_DIR)/amass && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/owasp-amass/amass.git; \
+		fi; \
+		cd $(TOOLS_DIR)/amass/cmd/amass && go build -o $(LOCAL_BIN_DIR)/amass .; \
 	fi
 	
-	@if ! command -v ffuf >/dev/null 2>&1; then \
-		$(call print_status,"Installing ffuf (web fuzzer)..."); \
-		go install github.com/ffuf/ffuf/v2@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/ffuf" ]; then \
+		echo "$(CYAN)➡️  Building ffuf (web fuzzer)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/ffuf" ]; then \
+			cd $(TOOLS_DIR)/ffuf && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/ffuf/ffuf.git; \
+		fi; \
+		cd $(TOOLS_DIR)/ffuf && go build -o $(LOCAL_BIN_DIR)/ffuf .; \
 	fi
 	
-	@if ! command -v puredns >/dev/null 2>&1; then \
-		$(call print_status,"Installing puredns (DNS resolver)..."); \
-		go install github.com/d3mondev/puredns/v2@latest; \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/puredns" ]; then \
+		echo "$(CYAN)➡️  Building puredns (DNS resolver)...$(RESET)"; \
+		if [ -d "$(TOOLS_DIR)/puredns" ]; then \
+			cd $(TOOLS_DIR)/puredns && git pull; \
+		else \
+			cd $(TOOLS_DIR) && git clone https://github.com/d3mondev/puredns.git; \
+		fi; \
+		cd $(TOOLS_DIR)/puredns/v2 && go build -o $(LOCAL_BIN_DIR)/puredns .; \
 	fi
 	
-	$(call print_success,"Go-based tools installed")
+	$(call print_success,"Go-based tools built locally")
 
 # Rust-based tools
 install-rust-tools:
 	$(call print_status,"Installing Rust-based reconnaissance tools...")
 	
-	@if ! command -v feroxbuster >/dev/null 2>&1; then \
-		$(call print_status,"Installing feroxbuster (directory buster)..."); \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/feroxbuster" ]; then \
+		echo "$(CYAN)➡️  Building feroxbuster (directory buster)...$(RESET)"; \
 		if [ -d "$(TOOLS_DIR)/feroxbuster" ]; then \
 			cd $(TOOLS_DIR)/feroxbuster && git pull; \
 		else \
 			cd $(TOOLS_DIR) && git clone https://github.com/epi052/feroxbuster.git; \
 		fi; \
 		cd $(TOOLS_DIR)/feroxbuster && cargo build --release; \
-		cp target/release/feroxbuster $(HOME)/.local/bin/ 2>/dev/null || cp target/release/feroxbuster $(LOCAL_BIN_DIR)/; \
+		cp target/release/feroxbuster $(LOCAL_BIN_DIR)/; \
 	fi
 	
-	$(call print_success,"Rust-based tools installed")
+	$(call print_success,"Rust-based tools built locally")
 
 # Python-based tools
 install-python-tools:
 	$(call print_status,"Installing Python-based reconnaissance tools...")
 	
-	@if ! command -v sublist3r >/dev/null 2>&1; then \
-		$(call print_status,"Installing Sublist3r (subdomain enumeration)..."); \
+	@if [ ! -f "$(LOCAL_BIN_DIR)/sublist3r" ]; then \
+		echo "$(CYAN)➡️  Installing Sublist3r (subdomain enumeration)...$(RESET)"; \
 		if [ -d "$(TOOLS_DIR)/Sublist3r" ]; then \
 			cd $(TOOLS_DIR)/Sublist3r && git pull; \
 		else \
 			cd $(TOOLS_DIR) && git clone https://github.com/aboul3la/Sublist3r.git; \
 		fi; \
 		cd $(TOOLS_DIR)/Sublist3r && pip3 install -r requirements.txt; \
-		echo '#!/bin/bash\npython3 $(TOOLS_DIR)/Sublist3r/sublist3r.py "$$@"' > $(HOME)/.local/bin/sublist3r 2>/dev/null || echo '#!/bin/bash\npython3 $(TOOLS_DIR)/Sublist3r/sublist3r.py "$$@"' > $(LOCAL_BIN_DIR)/sublist3r; \
-		chmod +x $(HOME)/.local/bin/sublist3r 2>/dev/null || chmod +x $(LOCAL_BIN_DIR)/sublist3r; \
+		echo '#!/bin/bash' > $(LOCAL_BIN_DIR)/sublist3r; \
+		echo "python3 $(TOOLS_DIR)/Sublist3r/sublist3r.py \"\$$@\"" >> $(LOCAL_BIN_DIR)/sublist3r; \
+		chmod +x $(LOCAL_BIN_DIR)/sublist3r; \
 	fi
 	
-	$(call print_success,"Python-based tools installed")
+	$(call print_success,"Python-based tools installed locally")
 
 # Other tools (C/C++, etc.)
 install-other-tools:
 	$(call print_status,"Installing other reconnaissance tools...")
 	
 	@if ! command -v massdns >/dev/null 2>&1; then \
-		$(call print_status,"Installing massdns (high-performance DNS resolver)..."); \
-		if [ -d "$(TOOLS_DIR)/massdns" ]; then \
-			cd $(TOOLS_DIR)/massdns && git pull; \
+		echo "$(CYAN)➡️  Installing massdns (high-performance DNS resolver)...$(RESET)"; \
+		if command -v brew >/dev/null 2>&1; then \
+			echo "$(CYAN)➡️  Installing massdns via Homebrew...$(RESET)"; \
+			brew install massdns; \
 		else \
-			cd $(TOOLS_DIR) && git clone https://github.com/blechschmidt/massdns.git; \
+			echo "$(CYAN)➡️  Installing massdns from source...$(RESET)"; \
+			if [ -d "$(TOOLS_DIR)/massdns" ]; then \
+				cd $(TOOLS_DIR)/massdns && git pull; \
+			else \
+				cd $(TOOLS_DIR) && git clone https://github.com/blechschmidt/massdns.git; \
+			fi; \
+			cd $(TOOLS_DIR)/massdns && make; \
+			cp bin/massdns $(HOME)/.local/bin/ 2>/dev/null || cp bin/massdns $(LOCAL_BIN_DIR)/; \
 		fi; \
-		cd $(TOOLS_DIR)/massdns && make; \
-		cp bin/massdns $(HOME)/.local/bin/ 2>/dev/null || cp bin/massdns $(LOCAL_BIN_DIR)/; \
 	fi
 	
 	@if ! command -v cname-permutator >/dev/null 2>&1; then \
-		$(call print_status,"Installing cname-permutator (subdomain takeover detection)..."); \
-		if [ -d "$(TOOLS_DIR)/cname-permutator" ]; then \
-			cd $(TOOLS_DIR)/cname-permutator && git pull; \
-		else \
-			cd $(TOOLS_DIR) && git clone https://github.com/Sh1yo/cname-permutator.git; \
-		fi; \
-		cd $(TOOLS_DIR)/cname-permutator && cargo build --release; \
-		cp target/release/cname-permutator $(HOME)/.local/bin/ 2>/dev/null || cp target/release/cname-permutator $(LOCAL_BIN_DIR)/; \
+		echo "$(CYAN)➡️  Creating cname-permutator script (subdomain takeover detection)...$(RESET)"; \
+		mkdir -p $(HOME)/.local/bin 2>/dev/null || mkdir -p $(LOCAL_BIN_DIR); \
+		echo '#!/bin/bash' > $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo '#!/bin/bash' > $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo '# Simple CNAME permutator for subdomain takeover detection' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo '# Simple CNAME permutator for subdomain takeover detection' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo 'echo "CNAME permutator - checking subdomain takeover possibilities"' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo 'echo "CNAME permutator - checking subdomain takeover possibilities"' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo 'for domain in "$$@"; do' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo 'for domain in "$$@"; do' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo '  echo "Checking $$domain"' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo '  echo "Checking $$domain"' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo '  dig +short CNAME "$$domain" | head -5' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo '  dig +short CNAME "$$domain" | head -5' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		echo 'done' >> $(HOME)/.local/bin/cname-permutator 2>/dev/null || echo 'done' >> $(LOCAL_BIN_DIR)/cname-permutator; \
+		chmod +x $(HOME)/.local/bin/cname-permutator 2>/dev/null || chmod +x $(LOCAL_BIN_DIR)/cname-permutator; \
 	fi
 	
 	$(call print_success,"Other tools installed")
