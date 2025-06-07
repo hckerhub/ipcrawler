@@ -1,0 +1,127 @@
+# ===== IPCrawler - Gitignore Configuration =====
+# This file excludes locally installed tools and dependencies
+# to keep the repository clean and portable
+
+# ===== MAKEFILE INSTALLED DIRECTORIES =====
+# These directories are created by 'make install' and should not be committed
+tools/                    # Cloned tool repositories (Go, Rust, Python tools)
+wordlists/               # Downloaded wordlist collections (SecLists, etc.)
+bin/                     # Local compiled binaries
+
+# Note: Go installation goes to ~/.local/go (outside this repo)
+# Rust installation goes to ~/.cargo (outside this repo)
+
+# ===== PYTHON ENVIRONMENT =====
+# Virtual environment and Python artifacts
+venv/                    # Python virtual environment
+env/                     # Alternative virtual environment name
+.env/                    # Another common virtual environment name
+__pycache__/             # Python bytecode cache
+*.py[cod]                # Python compiled files
+*$py.class               # Python class files
+*.so                     # Shared objects
+
+# Python distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ===== DEVELOPMENT ENVIRONMENTS =====
+# IDE and editor configurations (keep project-wide settings)
+.vscode/settings.json    # Personal VS Code settings
+.vscode/launch.json      # Personal debug configurations
+.idea/                   # IntelliJ IDEA
+*.swp                    # Vim swap files
+*.swo                    # Vim swap files
+*~                       # Backup files
+
+# ===== SYSTEM FILES =====
+# Operating system generated files
+.DS_Store                # macOS
+.DS_Store?               # macOS
+._*                      # macOS
+.Spotlight-V100          # macOS
+.Trashes                 # macOS
+ehthumbs.db              # Windows
+Thumbs.db                # Windows
+Desktop.ini              # Windows
+
+# ===== LOGS AND TEMPORARY FILES =====
+# Application logs and temporary files
+*.log                    # Log files
+*.tmp                    # Temporary files
+*.temp                   # Temporary files
+logs/                    # Log directories
+temp/                    # Temporary directories
+.cache/                  # Cache directories
+
+# ===== RECONNAISSANCE OUTPUT =====
+# Output from reconnaissance tools (uncomment if you want to ignore scan results)
+# results/               # Scan results directory
+# output/                # Tool output directory
+# scans/                 # Scan data directory
+# reports/               # Generated reports
+
+# ===== SENSITIVE DATA =====
+# Configuration files that might contain API keys or secrets
+.env                     # Environment variables file
+.envrc                   # direnv configuration
+config.local.py          # Local configuration overrides
+secrets.py               # Secrets file
+api_keys.txt             # API keys file
+*.key                    # Key files
+*.pem                    # Certificate files
+*.p12                    # Certificate files
+
+# ===== TESTING =====
+# Testing artifacts
+.pytest_cache/           # Pytest cache
+.coverage                # Coverage reports
+htmlcov/                 # Coverage HTML reports
+.tox/                    # Tox testing
+.nox/                    # Nox testing
+
+# ===== DOCUMENTATION =====
+# Generated documentation
+docs/_build/             # Sphinx documentation
+
+# ===== VERSION CONTROL =====
+# Git specific
+*.orig                   # Git merge conflict files
+
+# ===== PROJECT SPECIFIC =====
+# Add any project-specific files/directories you want to ignore here
+# For example:
+# custom_configs/        # Custom user configurations
+# personal_wordlists/    # Personal wordlist collections
+# private_tools/         # Private or custom tools
+
+# ===== KEEP THESE COMMITTED =====
+# These files should remain in the repository:
+# - Makefile              (for tool installation)
+# - requirements.txt      (Python dependencies)
+# - src/                  (source code)
+# - README.md             (documentation)
+# - PROJECT_STRUCTURE.md  (project documentation)
+# - ipcrawler.py          (main application)
+
+# ===== NOTES =====
+# After cloning this repository, users should run:
+# 1. make install         # Install all reconnaissance tools
+# 2. python -m venv venv  # Create virtual environment (if not using system Python)
+# 3. source venv/bin/activate  # Activate virtual environment
+# 4. pip install -r requirements.txt  # Install Python dependencies

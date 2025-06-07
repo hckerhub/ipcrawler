@@ -1,0 +1,6 @@
+# IPCrawler Dependencies
+# Modern terminal UI framework
+textual>=0.48.0
+
+# Rich text and formatting (included with textual but explicitly listed)
+rich>=13.0.0
