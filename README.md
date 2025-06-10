@@ -34,6 +34,57 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 ## 🚀 Quick Start
 
+### 🔧 Don't have `make` installed?
+
+**No problem!** Our bootstrap script automatically installs `make` on any system:
+
+```bash
+# Clone the repository
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+
+# Run the bootstrap script (installs make automatically)
+./bootstrap.sh
+
+# Then use standard make commands
+make setup      # or make setup-docker
+```
+
+**What the bootstrap script does:**
+- ✅ **Detects your operating system** automatically
+- ✅ **Installs make** using the appropriate package manager
+- ✅ **Supports all major platforms**: Linux, macOS, Windows (WSL)
+- ✅ **One command solution** - no manual steps needed
+
+**Supported systems:**
+- **Linux**: Kali, Ubuntu, Debian, Arch, CentOS, RHEL, Fedora, openSUSE, Alpine
+- **macOS**: Via Homebrew or Xcode Command Line Tools
+- **Windows**: WSL, Chocolatey, or Scoop
+
+### 🪟 Windows Users
+
+**For Windows, the bootstrap script recommends:**
+
+1. **WSL (Windows Subsystem for Linux)** - Best option
+   ```cmd
+   wsl --install
+   # Then clone and run bootstrap inside WSL
+   ```
+
+2. **Package managers** - If you prefer native Windows
+   ```cmd
+   # Via Chocolatey
+   choco install make
+   
+   # Via Scoop  
+   scoop install make
+   ```
+
+3. **Docker Desktop** - Cross-platform solution
+   ```cmd
+   # Install Docker Desktop, then use make setup-docker
+   ```
+
 ### 🐳 Docker Setup (Recommended)
 No dependencies needed - everything runs in a container!
 
