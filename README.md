@@ -34,238 +34,67 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 ## 📋 Prerequisites
 
-### 🪟 Windows Users
-- **Docker Desktop for Windows** - [Download here](https://www.docker.com/products/docker-desktop)
-- That's it! The `ipcrawler-windows.bat` handles everything else.
+### 🪟 Windows
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
-### 🐧 Linux Users
-- **Python 3.8+** - [Download from python.org](https://www.python.org/downloads/) or install via package manager:
+### 🐧 Linux/macOS  
+- **Python 3.8+**: [python.org](https://www.python.org/downloads/) or package manager
   ```bash
-  # Ubuntu/Debian
-  sudo apt update && sudo apt install python3 python3-pip python3-venv
-  
-  # CentOS/RHEL/Fedora
-  sudo yum install python3 python3-pip  # or dnf install
-  
-  # Arch Linux
-  sudo pacman -S python python-pip
+  # Ubuntu/Debian: sudo apt install python3 python3-pip python3-venv
+  # CentOS/RHEL: sudo yum install python3 python3-pip  
+  # Arch: sudo pacman -S python python-pip
+  # macOS: brew install python3
   ```
-
-- **make** (for convenience commands):
-  ```bash
-  # Ubuntu/Debian/Kali
-  sudo apt install make
-  
-  # CentOS/RHEL/Fedora
-  sudo yum install make  # or dnf install make
-  
-  # Arch Linux
-  sudo pacman -S make
-  ```
-
-### 🍎 macOS Users
-- **Python 3.8+** - [Download from python.org](https://www.python.org/downloads/) or use Homebrew:
-  ```bash
-  brew install python3
-  ```
-
-- **make** (usually pre-installed, or via Xcode tools):
-  ```bash
-  # Install Xcode Command Line Tools
-  xcode-select --install
-  
-  # Or via Homebrew
-  brew install make
-  ```
+- **make**: Usually pre-installed or `sudo apt install make`
 
 ## 🚀 Quick Start
 
-### 🪟 Windows Users (Docker Only)
-
-**The simplest way to run ipcrawler on Windows is with Docker:**
-
-#### **🚀 One-Click Setup**
-1. **Install Docker Desktop for Windows** from [docker.com](https://www.docker.com/products/docker-desktop)
-2. **Double-click to run:**
+### 🪟 Windows Users
+1. **Install Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
+2. **Run the launcher:**
 ```cmd
 git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
 ipcrawler-windows.bat
 ```
 
-**What the launcher does:**
-- ✅ Checks Docker is installed and running
-- ✅ Builds Docker image automatically (first time only)  
-- ✅ Opens interactive Docker terminal with all tools
-- ✅ Mounts results folder to your Windows filesystem
-- ✅ Shows helpful commands and usage tips
-
-**Inside the container:**
-```bash
-# Available immediately:
-ipcrawler --help              # Show help
-ipcrawler 127.0.0.1           # Test scan  
-ipcrawler target.com          # Scan target
-ipcrawler -v target.com       # Verbose scan
-ls /scans                     # View results
-exit                          # Leave container
-```
-
-**Results automatically saved to:** `your-folder\results\`
+The launcher automatically builds Docker image and opens an interactive terminal with all tools ready.
 
 ### 🐧 Linux/macOS Users
 
-#### **⚡ One-liner (if you have make):**
+**Prerequisites:** Python 3.8+, make ([see installation](#-prerequisites))
+
 ```bash
+# One-liner setup
 git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
+
+# Or if you don't have make installed
+./bootstrap.sh && make setup
 ```
 
-#### **📦 Don't have make? Auto-install it:**
+### 🐳 Docker Setup (All Platforms)
+
+**Bypasses all system requirements - just needs Docker!**
+
 ```bash
-git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
+git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler
+make setup-docker && make docker-cmd
+
+# Or manual Docker setup
+docker build -t ipcrawler . && docker run -it --rm -v $(pwd)/results:/scans ipcrawler
 ```
 
-### 🐧 Linux/macOS Users
-
-**📋 First, ensure you have the [prerequisites](#-prerequisites) installed (Python 3.8+ and make)**
-
-#### **⚡ One-liner (if you have Python and make):**
-```bash
-git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
-```
-
-#### **📦 Don't have make? Auto-install it:**
-```bash
-git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
-```
-
-#### **🔍 Quick prerequisite check:**
-```bash
-python3 --version  # Should show 3.8 or higher
-make --version     # Should show GNU Make
-```
-
-### 🔧 Missing Make Commands (Docker Users)
-
-If you're using Docker only (Windows Path 1), you won't have access to these convenience commands:
+### 🔧 Make Commands (Linux/macOS Only)
 
 | Command | Description |
 |---------|-------------|
-| `make setup` | Auto-install all security tools (nmap, masscan, nikto, etc.) |
-| `make setup-docker` | Auto-install Docker and Docker Compose |
-| `make clean` | Remove all installed tools and virtual environment |
-| `make update` | Update ipcrawler, tools, and rebuild Docker image |
-| `make test` | Run unit tests and linting |
-| `make lint` | Check code formatting and style |
-| `make format` | Auto-format Python code |
+| `make setup` | Install all tools and create virtual environment |
+| `make setup-docker` | Build Docker image |
+| `make docker-cmd` | Start interactive Docker container |
+| `make clean` | Remove everything (preserves scan results) |
+| `make update` | Update tools and Docker image |
 
-**💡 Docker alternative:** You can update the Docker image with:
-```bash
-# Update ipcrawler
-git pull
-
-# Rebuild Docker image with latest changes
-docker build -t ipcrawler .
-```
-
-### 🔧 Advanced Make Commands (For Developers)
-
-**Windows users:** You have the `ipcrawler-windows.bat` launcher - no make commands needed!
-
-**Linux/macOS users** get these additional convenience commands:
-
-| Command | Description |
-|---------|-------------|
-| `make setup` | Auto-install all security tools (nmap, masscan, nikto, etc.) |
-| `make setup-docker` | Auto-install Docker and Docker Compose |
-| `make clean` | Remove all installed tools and virtual environment |
-| `make update` | Update ipcrawler, tools, and rebuild Docker image |
-| `make test` | Run unit tests and linting |
-| `make lint` | Check code formatting and style |
-| `make format` | Auto-format Python code |
-
-**💡 Windows alternatives:**
-```cmd
-# Update ipcrawler and rebuild
-git pull
-docker build -t ipcrawler .
-
-# View Docker images
-docker images
-
-# Remove old images
-docker rmi ipcrawler
-```
-
-### 🐳 Docker Setup (Recommended)
-
-**🎯 Bypasses all system requirements - just needs Docker!**
-
-No Python, make, or security tools needed on your host system!
-
-```bash
-# Clone and setup
-git clone https://github.com/hckerhub/ipcrawler.git
-cd ipcrawler
-
-# Build Docker image (one time)
-make setup-docker
-
-# Start interactive container
-make docker-cmd
-
-# Inside container - scan away!
-ipcrawler 10.10.10.1
-ipcrawler -v target.com
-exit  # Leave container when done
-```
-
-**Alternative Docker setup** (without make):
-```bash
-# Manual Docker setup
-docker build -t ipcrawler .
-docker run -it --rm -v $(pwd)/results:/scans ipcrawler
-```
-
-### 🖥️ Local Installation
-
-#### Prerequisites
-```bash
-# Update package cache
-sudo apt update
-
-# Install required tools (Kali Linux recommended)
-sudo apt install seclists curl dnsrecon enum4linux feroxbuster gobuster impacket-scripts nbtscan nikto nmap onesixtyone oscanner redis-tools smbclient smbmap snmp sslscan sipvicious tnscmd10g whatweb
-```
-
-#### Installation
-```bash
-# Clone and setup (one command!)
-git clone https://github.com/hckerhub/ipcrawler.git
-cd ipcrawler
-make setup
-```
-
-#### Usage
-```bash
-# Scan single target
-ipcrawler 10.10.10.1
-
-# Scan multiple targets
-ipcrawler 10.10.10.1 10.10.10.2 192.168.1.0/24
-
-# Scan from file
-ipcrawler -t targets.txt
-
-# Custom ports
-ipcrawler -p 80,443,8080 10.10.10.1
-```
-
-#### Cleanup
-```bash
-# Remove everything (local setup, Docker resources, empty directories)
-make clean
-```
+**Windows users:** Use `ipcrawler-windows.bat` - no make commands needed!
 
 ## 🔥 Key Features
 
@@ -311,8 +140,6 @@ ipcrawler --exclude-tags bruteforce 10.10.10.1
 # Time-limited scan (60 minutes max)
 ipcrawler --timeout 60 10.10.10.1
 ```
-
-
 
 ### Results Location
 - **Host machine**: `./results/` (persistent after container exits)
@@ -394,6 +221,23 @@ ipcrawler excels in time-constrained environments:
 - **Linux/Unix environment** (Kali Linux recommended)
 - **Network enumeration tools** (listed in prerequisites)
 - **SecLists wordlists** (`sudo apt install seclists`)
+
+## 💡 Quick Tips
+
+- **Start early** - Launch on all targets while focusing on one
+- **Use `-v`** - Shows discovered services in real-time  
+- **Check `_manual_commands.txt`** - Additional tests to run
+- **Results in `./results/`** - Preserved after cleanup
+
+## 🔍 Verbosity: None | `-v` | `-vv` | `-vvv` (minimal to maximum output)
+
+## 🏆 OSCP Success Stories
+
+*"AutoRecon was invaluable during my OSCP exam... I would strongly recommend this utility."* **- b0ats** (5/5 hosts)
+
+*"The strongest feature is the speed... in minutes I had all output waiting for me."* **- tr3mb0** (4/5 hosts)
+
+*ipcrawler provides the same power with easier setup!*
 
 ## 🤝 Contributing
 
