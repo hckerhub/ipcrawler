@@ -21,6 +21,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 | **Platform Support** | Windows, macOS, Linux | Linux/Unix only |
 | **Resource Usage** | Higher (container overhead) | Lower (native) |
 | **Tool Updates** | Rebuild image | Manual updates |
+| **Cleanup** | `make clean` (removes everything) | `make clean` (removes everything) |
 | **Recommended For** | Most users, beginners | Advanced users, performance |
 
 | **Before (AutoRecon)** | **After (ipcrawler)** |
@@ -89,7 +90,7 @@ ipcrawler -p 80,443,8080 10.10.10.1
 
 #### Cleanup
 ```bash
-# Remove everything (including global command)
+# Remove everything (local setup, Docker resources, empty directories)
 make clean
 ```
 
@@ -145,6 +146,7 @@ ipcrawler --timeout 60 10.10.10.1
 make help          # Show all available commands
 make setup-docker  # Build the Docker image (one time)
 make docker-cmd    # Start interactive container
+make clean         # Complete cleanup (local + Docker resources)
 ```
 
 ### Docker Features
@@ -153,6 +155,23 @@ make docker-cmd    # Start interactive container
 - ✅ **Persistent Results**: Scans saved to `results/` directory
 - ✅ **Pre-installed Tools**: Includes nmap and essential tools
 - ✅ **Expandable**: Run `/install-tools.sh` for additional tools
+- ✅ **Smart Cleanup**: `make clean` removes everything safely
+
+### Complete Workflow
+```bash
+# 1. Setup (one time)
+make setup-docker
+
+# 2. Scan targets
+make docker-cmd
+# Inside container: ipcrawler target.com
+
+# 3. Check results (on host)
+ls results/
+
+# 4. Complete cleanup (when done)
+make clean
+```
 
 ### Manual Docker Commands
 ```bash
@@ -169,6 +188,23 @@ docker run -it --rm --network host -v $(pwd)/results:/scans ipcrawler
 ### Results Location
 - **Host machine**: `./results/` (persistent after container exits)
 - **Inside container**: `/scans/` (mounted volume)
+
+### Cleanup
+The `make clean` command provides intelligent cleanup for both local and Docker installations:
+
+```bash
+make clean
+```
+
+**What it removes:**
+- ✅ Virtual environment and local installation
+- ✅ Docker images and containers (if they exist)
+- ✅ Empty results directories
+- ✅ Global command installation
+
+**What it preserves:**
+- 🛡️ Results directories containing scan data
+- 🛡️ Non-ipcrawler Docker resources
 
 ## ⚙️ Configuration
 
@@ -190,6 +226,8 @@ ipcrawler excels in time-constrained environments:
 3. **Check Manual Commands**: Review `_manual_commands.txt` for additional tests
 4. **Organized Results**: The directory structure keeps everything organized
 5. **Multiple Sessions**: Run different scan types in parallel
+6. **Easy Cleanup**: Use `make clean` for complete removal when done
+7. **Safe Results**: Cleanup preserves scan data in results directories
 
 ## 🔍 Verbosity Levels
 

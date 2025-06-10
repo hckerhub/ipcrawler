@@ -17,8 +17,6 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 RUN pip install .
 
-# Create a working directory for scan results
-RUN mkdir -p /scans
 WORKDIR /scans
 
 # Create a script to help users install additional tools if needed

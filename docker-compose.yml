@@ -4,7 +4,6 @@ services:
     container_name: ipcrawler-scanner
     volumes:
       - ./results:/scans
-      - ./custom-plugins:/app/custom-plugins:ro
     stdin_open: true
     tty: true
     network_mode: host  # Needed for local network scanning
