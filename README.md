@@ -33,7 +33,7 @@ sudo apt install seclists curl dnsrecon enum4linux feroxbuster gobuster impacket
 ### Installation
 ```bash
 # Clone and setup (one command!)
-git clone https://github.com/yourusername/ipcrawler.git
+git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
 make setup
 ```
