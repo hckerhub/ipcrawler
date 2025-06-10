@@ -34,20 +34,59 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 ## 🚀 Quick Start
 
+### ⚡ One-liner for experts
+```bash
+git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
+```
+
+**💡 If you get `$'\r': command not found` error:**
+```bash
+# Linux/WSL:
+sed -i 's/\r$//' bootstrap.sh && ./bootstrap.sh
+
+# macOS:
+sed -i '' 's/\r$//' bootstrap.sh && ./bootstrap.sh
+```
+
 ### 🔧 Don't have `make` installed?
 
 **No problem!** Our bootstrap script automatically installs `make` on any system:
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
 
-# Run the bootstrap script (installs make automatically)
+# 2. Make the bootstrap script executable
+chmod +x bootstrap.sh
+
+# 3. Run the bootstrap script (installs make automatically)
 ./bootstrap.sh
 
-# Then use standard make commands
+# 4. Verify make is now available
+make help       # Should show ipcrawler commands
+
+# 5. Set up ipcrawler
 make setup      # or make setup-docker
+```
+
+**How to run the bootstrap script:**
+
+- **Linux/macOS/WSL**: `./bootstrap.sh`
+- **Git Bash (Windows)**: `bash bootstrap.sh`
+- **Windows PowerShell**: `bash ./bootstrap.sh` (requires Git for Windows)
+
+**If you get "permission denied":**
+```bash
+# Make it executable first
+chmod +x bootstrap.sh
+./bootstrap.sh
+```
+
+**If you get "command not found":**
+```bash
+# Use bash explicitly
+bash bootstrap.sh
 ```
 
 **What the bootstrap script does:**
@@ -61,29 +100,77 @@ make setup      # or make setup-docker
 - **macOS**: Via Homebrew or Xcode Command Line Tools
 - **Windows**: WSL, Chocolatey, or Scoop
 
+**Bootstrap script troubleshooting:**
+
+| Issue | Solution |
+|-------|----------|
+| `./bootstrap.sh: Permission denied` | Run `chmod +x bootstrap.sh` first |
+| `./bootstrap.sh: No such file or directory` | Use `bash bootstrap.sh` instead |
+| `$'\r': command not found` or `syntax error` | Fix line endings: see "Line ending issues" below |
+| `make: command not found` after bootstrap | Close and reopen terminal, then try again |
+| Bootstrap fails on Windows | Use WSL or Git Bash instead of PowerShell |
+| `sudo: command not found` | You're likely on Windows - use WSL |
+
+**Line ending issues (Windows users):**
+
+This happens when Git converts line endings on Windows. Fix it with:
+
+```bash
+# Method 1: Fix the file directly
+sed -i 's/\r$//' bootstrap.sh         # Linux/WSL
+sed -i '' 's/\r$//' bootstrap.sh       # macOS
+dos2unix bootstrap.sh                  # If dos2unix is available
+
+# Method 2: Use tr command (works on all Unix systems)
+tr -d '\r' < bootstrap.sh > bootstrap_fixed.sh
+mv bootstrap_fixed.sh bootstrap.sh
+chmod +x bootstrap.sh
+
+# Method 3: Configure Git to avoid this issue
+git config core.autocrlf false
+git checkout -- bootstrap.sh
+```
+
 ### 🪟 Windows Users
 
-**For Windows, the bootstrap script recommends:**
+**Step-by-step for Windows:**
 
-1. **WSL (Windows Subsystem for Linux)** - Best option
-   ```cmd
-   wsl --install
-   # Then clone and run bootstrap inside WSL
-   ```
+#### **Option 1: WSL (Recommended)**
+```cmd
+# 1. Install WSL
+wsl --install
 
-2. **Package managers** - If you prefer native Windows
-   ```cmd
-   # Via Chocolatey
-   choco install make
-   
-   # Via Scoop  
-   scoop install make
-   ```
+# 2. Restart computer when prompted
 
-3. **Docker Desktop** - Cross-platform solution
-   ```cmd
-   # Install Docker Desktop, then use make setup-docker
-   ```
+# 3. Open WSL terminal and run:
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+./bootstrap.sh
+make setup
+```
+
+#### **Option 2: Git Bash**
+```cmd
+# 1. Install Git for Windows (includes Git Bash)
+# Download from: https://git-scm.com/download/win
+
+# 2. Open Git Bash and run:
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+bash bootstrap.sh
+make setup
+```
+
+#### **Option 3: Docker Desktop**
+```cmd
+# 1. Install Docker Desktop for Windows
+# 2. Open PowerShell/Command Prompt and run:
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+# If bootstrap fails, skip to Docker setup:
+docker build -t ipcrawler .
+docker run -it --rm -v %cd%/results:/scans ipcrawler
+```
 
 ### 🐳 Docker Setup (Recommended)
 No dependencies needed - everything runs in a container!
