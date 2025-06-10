@@ -39,13 +39,17 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
 ```
 
-**💡 If you get `$'\r': command not found` error:**
+**💡 Common fixes for bootstrap issues:**
 ```bash
-# Linux/WSL:
-sed -i 's/\r$//' bootstrap.sh && ./bootstrap.sh
+# Line ending errors ($'\r': command not found):
+sed -i 's/\r$//' bootstrap.sh && ./bootstrap.sh       # Linux/WSL
+sed -i '' 's/\r$//' bootstrap.sh && ./bootstrap.sh     # macOS
 
-# macOS:
-sed -i '' 's/\r$//' bootstrap.sh && ./bootstrap.sh
+# Permission or execution errors (WSL):
+chmod +x bootstrap.sh && ./bootstrap.sh
+
+# If nothing works, use bash directly:
+bash bootstrap.sh
 ```
 
 ### 🔧 Don't have `make` installed?
@@ -106,10 +110,36 @@ bash bootstrap.sh
 |-------|----------|
 | `./bootstrap.sh: Permission denied` | Run `chmod +x bootstrap.sh` first |
 | `./bootstrap.sh: No such file or directory` | Use `bash bootstrap.sh` instead |
+| `cannot execute: required file not found` (WSL) | See "WSL-specific issues" below |
 | `$'\r': command not found` or `syntax error` | Fix line endings: see "Line ending issues" below |
 | `make: command not found` after bootstrap | Close and reopen terminal, then try again |
 | Bootstrap fails on Windows | Use WSL or Git Bash instead of PowerShell |
 | `sudo: command not found` | You're likely on Windows - use WSL |
+
+**WSL-specific issues:**
+
+The `cannot execute: required file not found` error in WSL usually means:
+
+```bash
+# Solution 1: Fix permissions and line endings
+chmod +x bootstrap.sh
+sed -i 's/\r$//' bootstrap.sh
+./bootstrap.sh
+
+# Solution 2: Use bash directly (safest)
+bash bootstrap.sh
+
+# Solution 3: Check if bash is properly installed
+which bash
+# Should show: /bin/bash or /usr/bin/bash
+
+# Solution 4: If cloned to Windows filesystem, move to WSL filesystem
+# (WSL can have issues with files on Windows drives like /mnt/c/)
+cp -r . ~/ipcrawler
+cd ~/ipcrawler
+chmod +x bootstrap.sh
+./bootstrap.sh
+```
 
 **Line ending issues (Windows users):**
 
@@ -145,7 +175,16 @@ wsl --install
 # 3. Open WSL terminal and run:
 git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
+
+# 4. If you get "cannot execute: required file not found":
+chmod +x bootstrap.sh
+sed -i 's/\r$//' bootstrap.sh
+
+# 5. Run bootstrap
 ./bootstrap.sh
+# Or if that fails: bash bootstrap.sh
+
+# 6. Setup ipcrawler
 make setup
 ```
 
