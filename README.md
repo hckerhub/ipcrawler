@@ -45,7 +45,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
   # Arch: sudo pacman -S python python-pip
   # macOS: brew install python3
   ```
-- **make**: Usually pre-installed or `sudo apt install make`
+- **make**: Usually pre-installed or `sudo apt install make` or `brew install make`
 
 ## 🚀 Quick Start
 
