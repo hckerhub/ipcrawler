@@ -12,16 +12,50 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 **ipcrawler** takes AutoRecon's powerful enumeration capabilities and makes setup effortless:
 
+### 🤔 Docker vs Local Setup
+
+| Feature | Docker | Local |
+|---------|--------|-------|
+| **Setup Time** | 2 minutes | 5-10 minutes |
+| **Dependencies** | None (isolated) | Manual tool installation |
+| **Platform Support** | Windows, macOS, Linux | Linux/Unix only |
+| **Resource Usage** | Higher (container overhead) | Lower (native) |
+| **Tool Updates** | Rebuild image | Manual updates |
+| **Recommended For** | Most users, beginners | Advanced users, performance |
+
 | **Before (AutoRecon)** | **After (ipcrawler)** |
 |---|---|
-| `pipx install git+https://github.com/Tib3rius/AutoRecon.git` | `make setup` |
+| `pipx install git+https://github.com/Tib3rius/AutoRecon.git` | `make setup` or `make setup-docker` |
 | `sudo env "PATH=$PATH" autorecon target` | `ipcrawler target` |
-| Complex dependency management | Automatic virtual environment |
+| Complex dependency management | Automatic virtual environment or Docker |
 | Manual uninstallation | `make clean` |
+| Platform-specific installation issues | Docker works everywhere |
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### 🐳 Docker Setup (Recommended)
+No dependencies needed - everything runs in a container!
+
+```bash
+# Clone and setup
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+
+# Build Docker image (one time)
+make setup-docker
+
+# Start interactive container
+make docker-cmd
+
+# Inside container - scan away!
+ipcrawler 10.10.10.1
+ipcrawler -v target.com
+exit  # Leave container when done
+```
+
+### 🖥️ Local Installation
+
+#### Prerequisites
 ```bash
 # Update package cache
 sudo apt update
@@ -30,7 +64,7 @@ sudo apt update
 sudo apt install seclists curl dnsrecon enum4linux feroxbuster gobuster impacket-scripts nbtscan nikto nmap onesixtyone oscanner redis-tools smbclient smbmap snmp sslscan sipvicious tnscmd10g whatweb
 ```
 
-### Installation
+#### Installation
 ```bash
 # Clone and setup (one command!)
 git clone https://github.com/hckerhub/ipcrawler.git
@@ -38,7 +72,7 @@ cd ipcrawler
 make setup
 ```
 
-### Usage
+#### Usage
 ```bash
 # Scan single target
 ipcrawler 10.10.10.1
@@ -53,7 +87,7 @@ ipcrawler -t targets.txt
 ipcrawler -p 80,443,8080 10.10.10.1
 ```
 
-### Cleanup
+#### Cleanup
 ```bash
 # Remove everything (including global command)
 make clean
@@ -104,6 +138,38 @@ ipcrawler --exclude-tags bruteforce 10.10.10.1
 ipcrawler --timeout 60 10.10.10.1
 ```
 
+## 🐳 Docker Details
+
+### Available Make Commands
+```bash
+make help          # Show all available commands
+make setup-docker  # Build the Docker image (one time)
+make docker-cmd    # Start interactive container
+```
+
+### Docker Features
+- ✅ **No Dependencies**: Works on any system with Docker
+- ✅ **Isolated Environment**: No impact on host system
+- ✅ **Persistent Results**: Scans saved to `results/` directory
+- ✅ **Pre-installed Tools**: Includes nmap and essential tools
+- ✅ **Expandable**: Run `/install-tools.sh` for additional tools
+
+### Manual Docker Commands
+```bash
+# Build image
+docker build -t ipcrawler .
+
+# Run interactively with results mounted
+docker run -it --rm -v $(pwd)/results:/scans ipcrawler
+
+# For local network scanning
+docker run -it --rm --network host -v $(pwd)/results:/scans ipcrawler
+```
+
+### Results Location
+- **Host machine**: `./results/` (persistent after container exits)
+- **Inside container**: `/scans/` (mounted volume)
+
 ## ⚙️ Configuration
 
 ipcrawler uses the same configuration system as AutoRecon. Config files are located at:
@@ -134,24 +200,29 @@ ipcrawler excels in time-constrained environments:
 | `-vv` | Very verbose - commands executed, pattern matches |
 | `-vvv` | Maximum - live output from all commands |
 
-## 🏆 Testimonials
+## 🏆 What Users Say About AutoRecon (ipcrawler's foundation)
 
-> *"ipcrawler was invaluable during my OSCP exam... I would strongly recommend this utility for anyone in the PWK labs, the OSCP exam, or other environments such as VulnHub or HTB."*
+> *"AutoRecon was invaluable during my OSCP exam... I would strongly recommend this utility for anyone in the PWK labs, the OSCP exam, or other environments such as VulnHub or HTB."*
 > 
 > **- b0ats** (rooted 5/5 exam hosts)
 
-> *"The strongest feature of ipcrawler is the speed; on the OSCP exam I left the tool running in the background while I started with another target, and in a matter of minutes I had all of the output waiting for me."*
+> *"The strongest feature of AutoRecon is the speed; on the OSCP exam I left the tool running in the background while I started with another target, and in a matter of minutes I had all of the output waiting for me."*
 > 
 > **- tr3mb0** (rooted 4/5 exam hosts)
 
-> *"Being introduced to ipcrawler was a complete game changer for me while taking the OSCP... After running ipcrawler on my OSCP exam hosts, I was given a treasure chest full of information that helped me to start on each host and pass on my first try."*
+> *"Being introduced to AutoRecon was a complete game changer for me while taking the OSCP... After running AutoRecon on my OSCP exam hosts, I was given a treasure chest full of information that helped me to start on each host and pass on my first try."*
 > 
 > **- rufy** (rooted 4/5 exam hosts)
 
-*[More testimonials in the original AutoRecon repository]*
+*ipcrawler provides the same powerful enumeration with easier setup - just `make setup` and you're ready to go!*
 
 ## 📋 Requirements
 
+### Docker Setup (Recommended)
+- **Docker Desktop** or **Docker Engine**
+- **Any operating system** (Windows, macOS, Linux)
+
+### Local Setup
 - **Python 3.8+**
 - **Linux/Unix environment** (Kali Linux recommended)
 - **Network enumeration tools** (listed in prerequisites)

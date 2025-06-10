@@ -1,4 +1,4 @@
-.PHONY: setup clean
+.PHONY: setup clean setup-docker docker-cmd help
 
 setup:
 	@echo "Setting up ipcrawler..."
@@ -33,3 +33,36 @@ clean:
 	@sudo rm -f /usr/local/bin/ipcrawler
 	@echo "Clean complete."
 	@echo "Virtual environment deactivated (if it was active)."
+
+setup-docker:
+	@echo "Building ipcrawler Docker image..."
+	docker build -t ipcrawler .
+	@echo ""
+	@echo "✓ Docker setup complete!"
+	@echo "Now you can run: make docker-cmd"
+	@echo "Or manually: docker run -it --rm -v \$$(pwd)/results:/scans ipcrawler"
+
+docker-cmd:
+	@echo "Starting ipcrawler Docker container..."
+	@mkdir -p results
+	@echo "Results will be saved to: $$(pwd)/results"
+	@echo "Type 'exit' to leave the container"
+	@echo ""
+	docker run -it --rm -v "$$(pwd)/results:/scans" ipcrawler || true
+
+help:
+	@echo "Available make commands:"
+	@echo ""
+	@echo "  setup         - Set up local Python virtual environment"
+	@echo "  clean         - Remove local setup and virtual environment"
+	@echo "  setup-docker  - Build Docker image for ipcrawler"
+	@echo "  docker-cmd    - Run interactive Docker container"
+	@echo "  help          - Show this help message"
+	@echo ""
+	@echo "Docker Usage:"
+	@echo "  1. make setup-docker    # Build the image"
+	@echo "  2. make docker-cmd      # Start interactive session"
+	@echo ""
+	@echo "Local Usage:"
+	@echo "  1. make setup           # Set up locally"
+	@echo "  2. ipcrawler --help     # Use the tool"

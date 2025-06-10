@@ -1,14 +1,33 @@
-FROM debian:latest
+FROM python:3.11-slim
 
-RUN apt-get update
-RUN apt-get install -y ca-certificates gnupg wget
+# Install system packages including build tools for Python packages
+RUN apt-get update && apt-get install -y \
+    curl wget git \
+    nmap \
+    gcc python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN wget -q -O - https://archive.kali.org/archive-key.asc  | apt-key add -
-RUN echo "deb http://http.kali.org/kali kali-rolling main contrib non-free" >> /etc/apt/sources.list
-RUN apt-get update
+# Copy the local ipcrawler source code
+COPY . /app
+WORKDIR /app
 
-RUN apt-get install -y python3 python3-pip git seclists curl dnsrecon enum4linux feroxbuster gobuster impacket-scripts nbtscan nikto nmap onesixtyone oscanner redis-tools smbclient smbmap snmp sslscan sipvicious tnscmd10g whatweb
-RUN python3 -m pip install git+https://github.com/Tib3rius/ipcrawler.git
+# Install Python dependencies and ipcrawler
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+RUN pip install .
 
+# Create a working directory for scan results
+RUN mkdir -p /scans
+WORKDIR /scans
+
+# Create a script to help users install additional tools if needed
+RUN echo '#!/bin/bash\n\
+echo "Installing additional security tools..."\n\
+apt-get update\n\
+apt-get install -y gobuster nikto smbclient whatweb || true\n\
+echo "Done! Some tools may not be available on this minimal image."\n\
+echo "ipcrawler will work with basic functionality."\n\
+' > /install-tools.sh && chmod +x /install-tools.sh
 
 CMD ["/bin/bash"]
