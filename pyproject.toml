@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "autorecon"
+name = "ipcrawler"
 version = "2.0.36"
 description = "A multi-threaded network reconnaissance tool which performs automated enumeration of services."
 authors = ["Tib3rius"]
 license = "GNU GPL v3"
-exclude = ["autorecon.py"]
+exclude = ["ipcrawler.py"]
 packages = [
-	{ include = "autorecon" },
+	{ include = "ipcrawler" },
 ]
 
 [tool.poetry.dependencies]
@@ -22,7 +22,7 @@ Unidecode = "^1.3.1"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
-autorecon = "autorecon.main:main"
+ipcrawler = "ipcrawler.main:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
