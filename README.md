@@ -32,29 +32,174 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 | Manual uninstallation | `make clean` |
 | Platform-specific installation issues | Docker works everywhere |
 
+## 📋 Prerequisites
+
+### 🪟 Windows Users
+- **Docker Desktop for Windows** - [Download here](https://www.docker.com/products/docker-desktop)
+- That's it! The `ipcrawler-windows.bat` handles everything else.
+
+### 🐧 Linux Users
+- **Python 3.8+** - [Download from python.org](https://www.python.org/downloads/) or install via package manager:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt update && sudo apt install python3 python3-pip python3-venv
+  
+  # CentOS/RHEL/Fedora
+  sudo yum install python3 python3-pip  # or dnf install
+  
+  # Arch Linux
+  sudo pacman -S python python-pip
+  ```
+
+- **make** (for convenience commands):
+  ```bash
+  # Ubuntu/Debian/Kali
+  sudo apt install make
+  
+  # CentOS/RHEL/Fedora
+  sudo yum install make  # or dnf install make
+  
+  # Arch Linux
+  sudo pacman -S make
+  ```
+
+### 🍎 macOS Users
+- **Python 3.8+** - [Download from python.org](https://www.python.org/downloads/) or use Homebrew:
+  ```bash
+  brew install python3
+  ```
+
+- **make** (usually pre-installed, or via Xcode tools):
+  ```bash
+  # Install Xcode Command Line Tools
+  xcode-select --install
+  
+  # Or via Homebrew
+  brew install make
+  ```
+
 ## 🚀 Quick Start
 
-### ⚡ One-liner for experts
+### 🪟 Windows Users (Docker Only)
+
+**The simplest way to run ipcrawler on Windows is with Docker:**
+
+#### **🚀 One-Click Setup**
+1. **Install Docker Desktop for Windows** from [docker.com](https://www.docker.com/products/docker-desktop)
+2. **Double-click to run:**
+```cmd
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+ipcrawler-windows.bat
+```
+
+**What the launcher does:**
+- ✅ Checks Docker is installed and running
+- ✅ Builds Docker image automatically (first time only)  
+- ✅ Opens interactive Docker terminal with all tools
+- ✅ Mounts results folder to your Windows filesystem
+- ✅ Shows helpful commands and usage tips
+
+**Inside the container:**
+```bash
+# Available immediately:
+ipcrawler --help              # Show help
+ipcrawler 127.0.0.1           # Test scan  
+ipcrawler target.com          # Scan target
+ipcrawler -v target.com       # Verbose scan
+ls /scans                     # View results
+exit                          # Leave container
+```
+
+**Results automatically saved to:** `your-folder\results\`
+
+### 🐧 Linux/macOS Users
+
+#### **⚡ One-liner (if you have make):**
+```bash
+git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
+```
+
+#### **📦 Don't have make? Auto-install it:**
 ```bash
 git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
 ```
 
-**💡 Common fixes for bootstrap issues:**
+### 🐧 Linux/macOS Users
+
+**📋 First, ensure you have the [prerequisites](#-prerequisites) installed (Python 3.8+ and make)**
+
+#### **⚡ One-liner (if you have Python and make):**
 ```bash
-# Line ending errors ($'\r': command not found):
-sed -i 's/\r$//' bootstrap.sh && ./bootstrap.sh       # Linux/WSL
-sed -i '' 's/\r$//' bootstrap.sh && ./bootstrap.sh     # macOS
-
-# Permission or execution errors (WSL):
-chmod +x bootstrap.sh && ./bootstrap.sh
-
-# If nothing works, use bash directly:
-bash bootstrap.sh
+git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
 ```
 
-### 🔧 Don't have `make` installed?
+#### **📦 Don't have make? Auto-install it:**
+```bash
+git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && ./bootstrap.sh && make setup
+```
 
-**No problem!** Our bootstrap script automatically installs `make` on any system:
+#### **🔍 Quick prerequisite check:**
+```bash
+python3 --version  # Should show 3.8 or higher
+make --version     # Should show GNU Make
+```
+
+### 🔧 Missing Make Commands (Docker Users)
+
+If you're using Docker only (Windows Path 1), you won't have access to these convenience commands:
+
+| Command | Description |
+|---------|-------------|
+| `make setup` | Auto-install all security tools (nmap, masscan, nikto, etc.) |
+| `make setup-docker` | Auto-install Docker and Docker Compose |
+| `make clean` | Remove all installed tools and virtual environment |
+| `make update` | Update ipcrawler, tools, and rebuild Docker image |
+| `make test` | Run unit tests and linting |
+| `make lint` | Check code formatting and style |
+| `make format` | Auto-format Python code |
+
+**💡 Docker alternative:** You can update the Docker image with:
+```bash
+# Update ipcrawler
+git pull
+
+# Rebuild Docker image with latest changes
+docker build -t ipcrawler .
+```
+
+### 🔧 Advanced Make Commands (For Developers)
+
+**Windows users:** You have the `ipcrawler-windows.bat` launcher - no make commands needed!
+
+**Linux/macOS users** get these additional convenience commands:
+
+| Command | Description |
+|---------|-------------|
+| `make setup` | Auto-install all security tools (nmap, masscan, nikto, etc.) |
+| `make setup-docker` | Auto-install Docker and Docker Compose |
+| `make clean` | Remove all installed tools and virtual environment |
+| `make update` | Update ipcrawler, tools, and rebuild Docker image |
+| `make test` | Run unit tests and linting |
+| `make lint` | Check code formatting and style |
+| `make format` | Auto-format Python code |
+
+**💡 Windows alternatives:**
+```cmd
+# Update ipcrawler and rebuild
+git pull
+docker build -t ipcrawler .
+
+# View Docker images
+docker images
+
+# Remove old images
+docker rmi ipcrawler
+```
+
+**⚙️ Full Bootstrap Setup (For Make Commands)**
+
+If you don't have `make` installed, our bootstrap script will install it automatically:
 
 ```bash
 # 1. Clone the repository
@@ -112,9 +257,7 @@ bash bootstrap.sh
 | `./bootstrap.sh: No such file or directory` | Use `bash bootstrap.sh` instead |
 | `cannot execute: required file not found` (WSL) | See "WSL-specific issues" below |
 | `$'\r': command not found` or `syntax error` | Fix line endings: see "Line ending issues" below |
-| `make: command not found` after bootstrap | Close and reopen terminal, then try again |
-| Bootstrap fails on Windows | Use WSL or Git Bash instead of PowerShell |
-| `sudo: command not found` | You're likely on Windows - use WSL |
+| `make: command not found` after bootstrap | Close and reopen terminal |
 
 **WSL-specific issues:**
 
@@ -161,57 +304,26 @@ git config core.autocrlf false
 git checkout -- bootstrap.sh
 ```
 
-### 🪟 Windows Users
+**⚙️ Bootstrap Setup (Linux/macOS only)**
 
-**Step-by-step for Windows:**
+**Windows users:** Just use `ipcrawler-windows.bat` - no bootstrap needed!
 
-#### **Option 1: WSL (Recommended)**
-```cmd
-# 1. Install WSL
-wsl --install
+**Linux/macOS users without make:**
 
-# 2. Restart computer when prompted
-
-# 3. Open WSL terminal and run:
+```bash
+# Auto-install make and setup
 git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
-
-# 4. If you get "cannot execute: required file not found":
-chmod +x bootstrap.sh
-sed -i 's/\r$//' bootstrap.sh
-
-# 5. Run bootstrap
-./bootstrap.sh
-# Or if that fails: bash bootstrap.sh
-
-# 6. Setup ipcrawler
-make setup
+./bootstrap.sh && make setup
 ```
 
-#### **Option 2: Git Bash**
-```cmd
-# 1. Install Git for Windows (includes Git Bash)
-# Download from: https://git-scm.com/download/win
-
-# 2. Open Git Bash and run:
-git clone https://github.com/hckerhub/ipcrawler.git
-cd ipcrawler
-bash bootstrap.sh
-make setup
-```
-
-#### **Option 3: Docker Desktop**
-```cmd
-# 1. Install Docker Desktop for Windows
-# 2. Open PowerShell/Command Prompt and run:
-git clone https://github.com/hckerhub/ipcrawler.git
-cd ipcrawler
-# If bootstrap fails, skip to Docker setup:
-docker build -t ipcrawler .
-docker run -it --rm -v %cd%/results:/scans ipcrawler
-```
+**Common bootstrap issues:**
+- Permission denied → `chmod +x bootstrap.sh`
+- Line ending errors → `sed -i 's/\r$//' bootstrap.sh` 
+- Command not found → `bash bootstrap.sh`
 
 ### 🐳 Docker Setup (Recommended)
+
 No dependencies needed - everything runs in a container!
 
 ```bash
@@ -229,6 +341,36 @@ make docker-cmd
 ipcrawler 10.10.10.1
 ipcrawler -v target.com
 exit  # Leave container when done
+```
+
+### 🐳 Docker Setup (Recommended)
+
+**🎯 Bypasses all system requirements - just needs Docker!**
+
+No Python, make, or security tools needed on your host system!
+
+```bash
+# Clone and setup
+git clone https://github.com/hckerhub/ipcrawler.git
+cd ipcrawler
+
+# Build Docker image (one time)
+make setup-docker
+
+# Start interactive container
+make docker-cmd
+
+# Inside container - scan away!
+ipcrawler 10.10.10.1
+ipcrawler -v target.com
+exit  # Leave container when done
+```
+
+**Alternative Docker setup** (without make):
+```bash
+# Manual Docker setup
+docker build -t ipcrawler .
+docker run -it --rm -v $(pwd)/results:/scans ipcrawler
 ```
 
 ### 🖥️ Local Installation

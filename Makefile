@@ -3,22 +3,89 @@
 setup:
 	@echo "Setting up ipcrawler..."
 	@echo ""
+	@echo "🔍 Checking prerequisites..."
+	@# Check Python version
+	@if ! command -v python3 >/dev/null 2>&1; then \
+		echo "❌ Python 3 is not installed"; \
+		echo ""; \
+		echo "Please install Python 3.8+ first:"; \
+		echo "  • Ubuntu/Debian: sudo apt install python3 python3-pip python3-venv"; \
+		echo "  • CentOS/RHEL: sudo yum install python3 python3-pip"; \
+		echo "  • Arch: sudo pacman -S python python-pip"; \
+		echo "  • macOS: brew install python3"; \
+		echo "  • Or download from: https://www.python.org/downloads/"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@PYTHON_VERSION=$$(python3 -c "import sys; print('.'.join(map(str, sys.version_info[:2])))" 2>/dev/null || echo "unknown"); \
+	if [ "$$PYTHON_VERSION" != "unknown" ]; then \
+		echo "✅ Python $$PYTHON_VERSION detected"; \
+		MAJOR=$$(echo $$PYTHON_VERSION | cut -d. -f1); \
+		MINOR=$$(echo $$PYTHON_VERSION | cut -d. -f2); \
+		if [ $$MAJOR -lt 3 ] || ([ $$MAJOR -eq 3 ] && [ $$MINOR -lt 8 ]); then \
+			echo "⚠️  Python $$PYTHON_VERSION detected, but Python 3.8+ is recommended"; \
+			echo "   Download latest from: https://www.python.org/downloads/"; \
+		fi; \
+	else \
+		echo "⚠️  Could not determine Python version"; \
+	fi
+	@echo ""
 	@echo "🔍 Detecting operating system..."
 	@# Detect OS and install security tools
 	@if [ -f /etc/os-release ]; then \
 		OS_ID=$$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"'); \
 		OS_ID_LIKE=$$(grep '^ID_LIKE=' /etc/os-release | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo ""); \
+		WSL_DETECTED=""; \
+		if grep -q Microsoft /proc/version 2>/dev/null || [ -n "$$WSL_DISTRO_NAME" ]; then \
+			WSL_DETECTED="yes"; \
+			echo "🪟 WSL environment detected"; \
+		fi; \
 		if [ "$$OS_ID" = "kali" ] || [ "$$OS_ID" = "parrot" ] || echo "$$OS_ID_LIKE" | grep -q "debian\|ubuntu"; then \
 			echo "📦 Installing security tools for $$OS_ID (Debian-based)..."; \
+			echo "🔄 Updating package cache..."; \
 			sudo apt update -qq; \
-			sudo apt install -y seclists curl dnsrecon enum4linux feroxbuster gobuster impacket-scripts nbtscan nikto nmap onesixtyone oscanner redis-tools smbclient smbmap snmp sslscan sipvicious tnscmd10g whatweb 2>/dev/null || \
-			echo "⚠️  Some tools failed to install - continuing anyway"; \
+			echo "🐍 Installing Python venv package (fixes ensurepip issues)..."; \
+			sudo apt install -y python3-venv python3-pip; \
+			echo "📦 Installing core security tools..."; \
+			sudo apt install -y curl wget git nmap nikto whatweb sslscan smbclient; \
+			echo "📦 Installing available enumeration tools..."; \
+			FAILED_TOOLS=""; \
+			for tool in seclists dnsrecon enum4linux feroxbuster gobuster impacket-scripts nbtscan onesixtyone oscanner redis-tools smbmap snmp sipvicious tnscmd10g; do \
+				if ! sudo apt install -y $$tool 2>/dev/null; then \
+					echo "⚠️  $$tool failed via apt, checking snap..."; \
+					FAILED_TOOLS="$$FAILED_TOOLS $$tool"; \
+				fi; \
+			done; \
+			if [ -n "$$FAILED_TOOLS" ] && [ "$$WSL_DETECTED" = "yes" ]; then \
+				echo "🫰 Installing snap for WSL compatibility..."; \
+				sudo apt install -y snapd; \
+				sudo systemctl enable snapd 2>/dev/null || true; \
+				for tool in $$FAILED_TOOLS; do \
+					case $$tool in \
+						feroxbuster) \
+							echo "Installing feroxbuster via snap..."; \
+							sudo snap install feroxbuster 2>/dev/null || echo "⚠️  feroxbuster snap install failed"; \
+							;; \
+						gobuster) \
+							echo "Installing gobuster via snap..."; \
+							sudo snap install gobuster 2>/dev/null || echo "⚠️  gobuster snap install failed"; \
+							;; \
+						*) \
+							echo "⚠️  No snap alternative for $$tool"; \
+							;; \
+					esac; \
+				done; \
+			fi; \
+			echo "✅ Tool installation complete"; \
 		elif [ "$$OS_ID" = "arch" ] || [ "$$OS_ID" = "manjaro" ]; then \
 			echo "📦 Installing security tools for $$OS_ID (Arch-based)..."; \
-			sudo pacman -Sy --noconfirm nmap curl wget git || echo "⚠️  Some tools failed to install"; \
+			sudo pacman -Sy --noconfirm nmap curl wget git python python-pip || echo "⚠️  Some tools failed to install"; \
 			echo "ℹ️  For full tool support, consider using Kali Linux or install tools manually"; \
 		else \
 			echo "ℹ️  Unsupported Linux distribution: $$OS_ID"; \
+			echo "ℹ️  Installing basic requirements..."; \
+			sudo apt update -qq 2>/dev/null || true; \
+			sudo apt install -y python3-venv python3-pip curl wget git 2>/dev/null || true; \
 			echo "ℹ️  Please install security tools manually or use Docker setup"; \
 		fi; \
 	elif [ "$$(uname)" = "Darwin" ]; then \
@@ -47,7 +114,15 @@ setup:
 	fi
 	@echo ""
 	@echo "🐍 Setting up Python environment..."
-	python3 -m venv venv
+	@if ! python3 -m venv venv 2>/dev/null; then \
+		echo "⚠️  venv creation failed. Trying to fix..."; \
+		echo "Installing python3-venv package..."; \
+		sudo apt install -y python3-venv python3-pip 2>/dev/null || \
+		sudo yum install -y python3-venv python3-pip 2>/dev/null || \
+		sudo pacman -S --noconfirm python python-pip 2>/dev/null || \
+		echo "⚠️  Could not install python3-venv. Please install manually."; \
+		python3 -m venv venv; \
+	fi
 	venv/bin/python3 -m pip install --upgrade pip
 	venv/bin/python3 -m pip install -r requirements.txt
 	@echo "Creating ipcrawler command..."
@@ -59,7 +134,10 @@ setup:
 	@echo 'source "$$DIR/venv/bin/activate" && python3 "$$DIR/ipcrawler.py" "$$@"' >> ipcrawler-cmd
 	@chmod +x ipcrawler-cmd
 	@echo "Installing ipcrawler command to /usr/local/bin..."
-	@sudo ln -sf "$$(pwd)/ipcrawler-cmd" /usr/local/bin/ipcrawler
+	@if ! sudo ln -sf "$$(pwd)/ipcrawler-cmd" /usr/local/bin/ipcrawler 2>/dev/null; then \
+		echo "⚠️  Could not install to /usr/local/bin (permission issue)"; \
+		echo "💡 You can still use: ./ipcrawler-cmd or add to PATH manually"; \
+	fi
 	@echo ""
 	@echo "✅ Setup complete!"
 	@echo ""
