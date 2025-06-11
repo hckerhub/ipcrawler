@@ -152,12 +152,12 @@ class RichSummary(Report):
 <body>
     <div class="container">
         {self.generate_header(target, data)}
+        {self.generate_key_findings_section(target, data)}
         {self.generate_executive_summary(target, data)}
         {self.generate_services_section(data)}
-        {self.generate_port_scans_section(data)}
-        {self.generate_service_scans_section(data)}
+        {self.generate_scan_results_section(data)}
+        {self.generate_commands_reference_section(data)}
         {self.generate_special_files_section(data)}
-        {self.generate_detailed_results_section(data)}
         {self.generate_footer()}
     </div>
     
@@ -238,6 +238,228 @@ class RichSummary(Report):
             </div>
         </div>
         """
+
+	def extract_key_findings(self, target, data):
+		"""Extract key findings from scan results"""
+		findings = {
+			'urls': set(),
+			'domains': set(),
+			'vulnerabilities': [],
+			'credentials': [],
+			'interesting_files': [],
+			'technologies': set(),
+			'cms_versions': [],
+			'open_ports': []
+		}
+		
+		# Extract from discovered services
+		for service in data['discovered_services']:
+			if '/' in service:
+				parts = service.split('/')
+				if len(parts) >= 2:
+					protocol = parts[0].upper()
+					port = parts[1]
+					service_name = parts[2] if len(parts) > 2 else 'unknown'
+					findings['open_ports'].append(f"{protocol}/{port} ({service_name})")
+		
+		# Process all file results to extract findings
+		all_content = ""
+		for content in data['file_results'].values():
+			all_content += content + "\n"
+		for content in data['special_files'].values():
+			all_content += content + "\n"
+		
+		# Extract URLs and domains
+		import re
+		
+		# URLs
+		url_patterns = [
+			r'https?://[^\s<>"]+',
+			r'http://[^\s<>"]+',
+			r'https://[^\s<>"]+',
+		]
+		for pattern in url_patterns:
+			urls = re.findall(pattern, all_content, re.IGNORECASE)
+			findings['urls'].update(urls)
+		
+		# Domain patterns
+		domain_patterns = [
+			r'([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\.htb',
+			r'([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\.local',
+			r'([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\.thm',
+			r'[a-zA-Z0-9][a-zA-Z0-9\-]*\.htb',
+			r'[a-zA-Z0-9][a-zA-Z0-9\-]*\.local',
+			r'[a-zA-Z0-9][a-zA-Z0-9\-]*\.thm',
+		]
+		for pattern in domain_patterns:
+			domains = re.findall(pattern, all_content, re.IGNORECASE)
+			findings['domains'].update([d[0] if isinstance(d, tuple) else d for d in domains])
+		
+		# Extract technologies and versions
+		tech_patterns = [
+			r'Server:\s*([^\r\n]+)',
+			r'X-Powered-By:\s*([^\r\n]+)',
+			r'Apache/([0-9.]+)',
+			r'nginx/([0-9.]+)',
+			r'PHP/([0-9.]+)',
+			r'WordPress\s*([0-9.]+)',
+			r'Drupal\s*([0-9.]+)',
+			r'Joomla\s*([0-9.]+)',
+		]
+		for pattern in tech_patterns:
+			matches = re.findall(pattern, all_content, re.IGNORECASE)
+			for match in matches:
+				if isinstance(match, tuple):
+					findings['technologies'].add(match[0])
+				else:
+					findings['technologies'].add(match)
+		
+		# Extract vulnerabilities
+		vuln_patterns = [
+			r'CVE-\d{4}-\d{4,7}',
+			r'VULNERABLE[^\r\n]*',
+			r'State:\s*VULNERABLE[^\r\n]*',
+			r'Exploit available[^\r\n]*',
+		]
+		for pattern in vuln_patterns:
+			vulns = re.findall(pattern, all_content, re.IGNORECASE)
+			findings['vulnerabilities'].extend(vulns)
+		
+		# Extract credentials
+		cred_patterns = [
+			r'username[^\r\n]*:\s*([^\s\r\n]+)',
+			r'password[^\r\n]*:\s*([^\s\r\n]+)',
+			r'admin:([^\s\r\n]+)',
+			r'root:([^\s\r\n]+)',
+		]
+		for pattern in cred_patterns:
+			creds = re.findall(pattern, all_content, re.IGNORECASE)
+			findings['credentials'].extend(creds)
+		
+		# Extract interesting files
+		file_patterns = [
+			r'/[a-zA-Z0-9_\-./]*\.(?:txt|log|conf|config|xml|json|sql|db|backup|bak)(?:\s|$)',
+			r'/admin[^\s]*',
+			r'/backup[^\s]*',
+			r'/config[^\s]*',
+			r'/uploads[^\s]*',
+		]
+		for pattern in file_patterns:
+			files = re.findall(pattern, all_content, re.IGNORECASE)
+			findings['interesting_files'].extend(files)
+		
+		# Clean up findings
+		findings['urls'] = sorted(list(findings['urls']))[:20]  # Limit to top 20
+		findings['domains'] = sorted(list(findings['domains']))
+		findings['technologies'] = sorted(list(findings['technologies']))
+		findings['vulnerabilities'] = list(set(findings['vulnerabilities']))[:10]
+		findings['credentials'] = list(set(findings['credentials']))[:10]
+		findings['interesting_files'] = list(set(findings['interesting_files']))[:15]
+		
+		return findings
+
+	def generate_key_findings_section(self, target, data):
+		"""Generate key findings section at the top"""
+		findings = self.extract_key_findings(target, data)
+		
+		html_content = """
+        <div class="section key-findings">
+            <h2 onclick="toggleSection('key-findings')" class="collapsible">🎯 Key Findings</h2>
+            <div id="key-findings" class="collapsible-content">
+                <div class="findings-grid">
+"""
+		
+		# URLs Section
+		if findings['urls']:
+			html_content += f"""
+                    <div class="finding-card">
+                        <h3>🌐 URLs Discovered</h3>
+                        <div class="finding-list">
+"""
+			for url in findings['urls']:
+				html_content += f'<div class="finding-item url-item"><a href="{html.escape(url)}" target="_blank">{html.escape(url)}</a></div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		# Domains Section  
+		if findings['domains']:
+			html_content += f"""
+                    <div class="finding-card">
+                        <h3>🏷️ Domains & Subdomains</h3>
+                        <div class="finding-list">
+"""
+			for domain in findings['domains']:
+				html_content += f'<div class="finding-item domain-item">{html.escape(domain)}</div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		# Vulnerabilities Section
+		if findings['vulnerabilities']:
+			html_content += f"""
+                    <div class="finding-card vuln-card">
+                        <h3>🚨 Vulnerabilities</h3>
+                        <div class="finding-list">
+"""
+			for vuln in findings['vulnerabilities']:
+				html_content += f'<div class="finding-item vuln-item">{html.escape(vuln)}</div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		# Technologies Section
+		if findings['technologies']:
+			html_content += f"""
+                    <div class="finding-card">
+                        <h3>🔧 Technologies</h3>
+                        <div class="finding-list">
+"""
+			for tech in findings['technologies']:
+				html_content += f'<div class="finding-item tech-item">{html.escape(tech)}</div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		# Interesting Files Section
+		if findings['interesting_files']:
+			html_content += f"""
+                    <div class="finding-card">
+                        <h3>📁 Interesting Files</h3>
+                        <div class="finding-list">
+"""
+			for file in findings['interesting_files']:
+				html_content += f'<div class="finding-item file-item">{html.escape(file.strip())}</div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		# Credentials Section
+		if findings['credentials']:
+			html_content += f"""
+                    <div class="finding-card cred-card">
+                        <h3>🔑 Potential Credentials</h3>
+                        <div class="finding-list">
+"""
+			for cred in findings['credentials']:
+				html_content += f'<div class="finding-item cred-item">{html.escape(cred)}</div>'
+			html_content += """
+                        </div>
+                    </div>
+"""
+		
+		html_content += """
+                </div>
+            </div>
+        </div>
+        """
+		
+		return html_content
 
 	def generate_combined_header(self, targets):
 		"""Generate header for combined report"""
@@ -407,35 +629,72 @@ class RichSummary(Report):
 		
 		return html_content
 
-	def generate_port_scans_section(self, data):
-		"""Generate port scans section"""
+	def generate_scan_results_section(self, data):
+		"""Generate scan results section - focuses on findings, not commands"""
 		
-		if not data['port_scans']:
+		if not data['file_results']:
 			return ''
 		
 		html_content = f"""
         <div class="section">
-            <h2 onclick="toggleSection('port-scans')" class="collapsible">🔍 Port Scans ({len(data['port_scans'])})</h2>
-            <div id="port-scans" class="collapsible-content">
+            <h2 onclick="toggleSection('scan-results')" class="collapsible">📊 Scan Results & Findings ({len(data['file_results'])} files)</h2>
+            <div id="scan-results" class="collapsible-content">
 """
 		
-		for scan_slug, scan_info in data['port_scans'].items():
+		# Group files by directory
+		file_groups = {}
+		for file_path, content in data['file_results'].items():
+			dir_name = os.path.dirname(file_path) or 'root'
+			if dir_name not in file_groups:
+				file_groups[dir_name] = []
+			file_groups[dir_name].append((file_path, content))
+		
+		for dir_name, files in file_groups.items():
+			dir_id = dir_name.replace('/', '-').replace(' ', '-')
 			html_content += f"""
-                <div class="scan-item">
-                    <h3 onclick="toggleSection('port-{scan_slug}')" class="scan-header">
-                        🔍 {scan_info['plugin_name']} ({scan_slug})
+                <div class="results-group">
+                    <h3 onclick="toggleSection('results-{dir_id}')" class="results-header">
+                        📁 {dir_name}/ Results ({len(files)} files)
                     </h3>
-                    <div id="port-{scan_slug}" class="scan-content">
-                        <div class="commands-executed">
-                            <h4>Commands Executed:</h4>
+                    <div id="results-{dir_id}" class="results-content">
 """
 			
-			for command in scan_info['commands']:
-				cmd_text = html.escape(command[0]) if command[0] else 'No command recorded'
-				html_content += f'<div class="command"><code>{cmd_text}</code></div>'
+			for file_path, content in files:
+				file_name = os.path.basename(file_path)
+				file_id = file_path.replace('/', '-').replace('.', '-')
+				
+				# Extract key findings from this file
+				key_lines = self.extract_interesting_lines(content)
+				
+				html_content += f"""
+                        <div class="result-file">
+                            <h4 onclick="toggleSection('result-{file_id}')" class="file-header">
+                                📄 {file_name} - Key Findings
+                            </h4>
+                            <div id="result-{file_id}" class="file-content">
+"""
+				
+				if key_lines:
+					html_content += '<div class="key-findings-box">'
+					for line in key_lines[:20]:  # Show top 20 interesting lines
+						escaped_line = html.escape(line.strip())
+						html_content += f'<div class="key-line">{escaped_line}</div>'
+					html_content += '</div>'
+				
+				html_content += f"""
+                                <div class="full-output-toggle">
+                                    <button onclick="toggleFullOutput('full-{file_id}')" class="toggle-btn">
+                                        📄 Show Full Output ({len(content.splitlines())} lines)
+                                    </button>
+                                    <div id="full-{file_id}" class="full-output" style="display: none;">
+                                        <pre class="file-text">{html.escape(content)}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+"""
 			
 			html_content += """
-                        </div>
                     </div>
                 </div>
 """
@@ -447,54 +706,122 @@ class RichSummary(Report):
 		
 		return html_content
 
-	def generate_service_scans_section(self, data):
-		"""Generate service scans section"""
+	def extract_interesting_lines(self, content):
+		"""Extract the most interesting lines from scan output"""
+		lines = content.splitlines()
+		interesting = []
 		
-		if not data['service_scans']:
+		# Patterns for interesting information
+		patterns = [
+			r'http[s]?://[^\s]+',  # URLs
+			r'\d+/tcp\s+open',     # Open ports
+			r'\d+/udp\s+open',     # Open UDP ports
+			r'CVE-\d{4}-\d{4,7}',  # CVEs
+			r'VULNERABLE',         # Vulnerabilities
+			r'Server:\s*[^\r\n]+', # Server headers
+			r'Location:\s*[^\r\n]+', # Redirects
+			r'Title:\s*[^\r\n]+',  # Page titles
+			r'/[a-zA-Z0-9_\-/]+\.(php|asp|aspx|jsp|cgi|pl)', # Interesting files
+			r'admin|login|password|config|backup', # Interesting keywords
+			r'Directory listing|Index of', # Directory listings
+			r'Error|Exception|Warning.*:', # Errors that might reveal info
+			r'SQL|MySQL|PostgreSQL|Oracle', # Database info
+			r'WordPress|Drupal|Joomla', # CMS detection
+		]
+		
+		for line in lines:
+			line = line.strip()
+			if len(line) < 5:  # Skip very short lines
+				continue
+				
+			for pattern in patterns:
+				if re.search(pattern, line, re.IGNORECASE):
+					interesting.append(line)
+					break
+		
+		# Also include lines with specific keywords
+		keyword_lines = []
+		keywords = ['discovered', 'found', 'detected', 'identified', 'vulnerable', 'exploit', 'shell', 'flag']
+		for line in lines:
+			if any(keyword in line.lower() for keyword in keywords):
+				keyword_lines.append(line.strip())
+		
+		interesting.extend(keyword_lines)
+		
+		# Remove duplicates and return
+		return list(dict.fromkeys(interesting))
+
+	def generate_commands_reference_section(self, data):
+		"""Generate commands reference section - moved to bottom"""
+		
+		if not data['port_scans'] and not data['service_scans']:
 			return ''
 		
-		total_scans = sum(len(scans) for scans in data['service_scans'].values())
+		total_commands = len(data['port_scans']) + sum(len(scans) for scans in data['service_scans'].values())
 		
 		html_content = f"""
-        <div class="section">
-            <h2 onclick="toggleSection('service-scans')" class="collapsible">🔧 Service Scans ({total_scans})</h2>
-            <div id="service-scans" class="collapsible-content">
+        <div class="section commands-section">
+            <h2 onclick="toggleSection('commands-ref')" class="collapsible">⚡ Commands Reference ({total_commands} scans)</h2>
+            <div id="commands-ref" class="collapsible-content" style="display: none;">
+                <p class="section-note">📝 This section shows the exact commands that were executed during the scan.</p>
 """
 		
-		for service_tag, service_scans in data['service_scans'].items():
+		# Port scans
+		if data['port_scans']:
 			html_content += f"""
-                <div class="service-group">
-                    <h3 onclick="toggleSection('service-{service_tag.replace('/', '-')}')" class="service-header">
-                        🎯 {service_tag} ({len(service_scans)} scans)
+                <div class="commands-group">
+                    <h3 onclick="toggleSection('port-commands')" class="commands-header">
+                        🔍 Port Scan Commands ({len(data['port_scans'])})
                     </h3>
-                    <div id="service-{service_tag.replace('/', '-')}" class="service-scans-content">
+                    <div id="port-commands" class="commands-content" style="display: none;">
 """
 			
-			for plugin_slug, plugin_info in service_scans.items():
+			for scan_slug, scan_info in data['port_scans'].items():
 				html_content += f"""
-                        <div class="scan-item">
-                            <h4 onclick="toggleSection('service-scan-{plugin_slug}')" class="scan-header">
-                                🔧 {plugin_info['plugin_name']} ({plugin_slug})
-                            </h4>
-                            <div id="service-scan-{plugin_slug}" class="scan-content">
-                                <div class="commands-executed">
-                                    <h5>Commands Executed:</h5>
+                        <div class="command-item">
+                            <h4>{scan_info['plugin_name']} ({scan_slug})</h4>
 """
 				
-				for command in plugin_info['commands']:
+				for command in scan_info['commands']:
 					cmd_text = html.escape(command[0]) if command[0] else 'No command recorded'
 					html_content += f'<div class="command"><code>{cmd_text}</code></div>'
 				
-				html_content += """
-                                </div>
-                            </div>
-                        </div>
+				html_content += '</div>'
+			
+			html_content += '</div></div>'
+		
+		# Service scans
+		if data['service_scans']:
+			total_service_scans = sum(len(scans) for scans in data['service_scans'].values())
+			html_content += f"""
+                <div class="commands-group">
+                    <h3 onclick="toggleSection('service-commands')" class="commands-header">
+                        🔧 Service Scan Commands ({total_service_scans})
+                    </h3>
+                    <div id="service-commands" class="commands-content" style="display: none;">
 """
 			
-			html_content += """
-                    </div>
-                </div>
+			for service_tag, service_scans in data['service_scans'].items():
+				html_content += f"""
+                        <div class="service-commands">
+                            <h4>{service_tag} Commands</h4>
 """
+				
+				for plugin_slug, plugin_info in service_scans.items():
+					html_content += f"""
+                            <div class="command-item">
+                                <h5>{plugin_info['plugin_name']} ({plugin_slug})</h5>
+"""
+					
+					for command in plugin_info['commands']:
+						cmd_text = html.escape(command[0]) if command[0] else 'No command recorded'
+						html_content += f'<div class="command"><code>{cmd_text}</code></div>'
+					
+					html_content += '</div>'
+				
+				html_content += '</div>'
+			
+			html_content += '</div></div>'
 		
 		html_content += """
             </div>
@@ -904,6 +1231,206 @@ class RichSummary(Report):
             margin-bottom: 20px;
         }
         
+        /* Key Findings Styles */
+        .key-findings {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border: 2px solid #ff6b6b;
+        }
+        
+        .findings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .finding-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #4facfe;
+        }
+        
+        .finding-card.vuln-card {
+            border-left-color: #ff4757;
+            background: linear-gradient(135deg, #fff 0%, #ffebee 100%);
+        }
+        
+        .finding-card.cred-card {
+            border-left-color: #ffa726;
+            background: linear-gradient(135deg, #fff 0%, #fff3e0 100%);
+        }
+        
+        .finding-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .finding-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .finding-item {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #4facfe;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .finding-item.url-item {
+            border-left-color: #2ecc71;
+        }
+        
+        .finding-item.url-item a {
+            color: #2ecc71;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .finding-item.url-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .finding-item.domain-item {
+            border-left-color: #3498db;
+            color: #2980b9;
+            font-weight: bold;
+        }
+        
+        .finding-item.vuln-item {
+            border-left-color: #e74c3c;
+            background: #fff5f5;
+            color: #c53030;
+            font-weight: bold;
+        }
+        
+        .finding-item.tech-item {
+            border-left-color: #9b59b6;
+            color: #8e44ad;
+        }
+        
+        .finding-item.file-item {
+            border-left-color: #f39c12;
+            color: #d68910;
+        }
+        
+        .finding-item.cred-item {
+            border-left-color: #ff6348;
+            background: #fff8f5;
+            color: #d63031;
+            font-weight: bold;
+        }
+        
+        /* Scan Results Styles */
+        .results-group, .commands-group {
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .results-header, .commands-header {
+            background: #e3f2fd;
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 1.1em;
+            color: #1976d2;
+            transition: background 0.3s;
+        }
+        
+        .results-header:hover, .commands-header:hover {
+            background: #bbdefb;
+        }
+        
+        .results-content, .commands-content {
+            padding: 15px;
+        }
+        
+        .key-findings-box {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0fff0 100%);
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .key-line {
+            background: white;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #4caf50;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #2e7d32;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .full-output-toggle {
+            margin-top: 15px;
+        }
+        
+        .toggle-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .toggle-btn:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            transform: translateY(-1px);
+        }
+        
+        .full-output {
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        
+        .commands-section {
+            opacity: 0.8;
+        }
+        
+        .section-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .command-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #6c757d;
+        }
+        
+        .command-item h4, .command-item h5 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        
         /* Responsive design */
         @media (max-width: 768px) {
             .container {
@@ -959,11 +1486,46 @@ class RichSummary(Report):
             }
         }
         
-        // Initialize all sections as expanded
+        function toggleFullOutput(outputId) {
+            const output = document.getElementById(outputId);
+            const button = event.target;
+            
+            if (output.style.display === 'none') {
+                output.style.display = 'block';
+                button.textContent = button.textContent.replace('Show', 'Hide');
+            } else {
+                output.style.display = 'none';
+                button.textContent = button.textContent.replace('Hide', 'Show');
+            }
+        }
+        
+        // Initialize sections - Key findings expanded, others based on importance
         document.addEventListener('DOMContentLoaded', function() {
-            const collapsibleContents = document.querySelectorAll('.collapsible-content');
-            collapsibleContents.forEach(content => {
-                content.style.display = 'block';
+            // Always expand key findings
+            const keyFindings = document.getElementById('key-findings');
+            if (keyFindings) {
+                keyFindings.style.display = 'block';
+            }
+            
+            // Expand executive summary and services
+            const important = ['executive-summary', 'services', 'scan-results'];
+            important.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.style.display = 'block';
+                }
             });
+            
+            // Keep commands section collapsed by default (less important)
+            const commandsRef = document.getElementById('commands-ref');
+            if (commandsRef) {
+                commandsRef.style.display = 'none';
+            }
+            
+            // Keep special files expanded
+            const specialFiles = document.getElementById('special-files');
+            if (specialFiles) {
+                specialFiles.style.display = 'block';
+            }
         });
         """ 
