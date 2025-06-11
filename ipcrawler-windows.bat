@@ -12,7 +12,9 @@ if errorlevel 1 (
     echo ❌ Docker is not installed or not in PATH
     echo.
     echo Please install Docker Desktop for Windows:
-    echo https://www.docker.com/products/docker-desktop
+    echo https://docs.docker.com/desktop/install/windows/
+    echo.
+    echo Then restart this script
     echo.
     pause
     exit /b 1
@@ -30,17 +32,15 @@ if errorlevel 1 (
 )
 
 echo ✅ Docker is ready!
+docker --version
 echo.
 
 REM Check if ipcrawler image exists
-docker images -q ipcrawler >nul 2>&1
-if errorlevel 1 (
-    set "IMAGE_EXISTS=false"
-) else (
-    for /f %%i in ('docker images -q ipcrawler') do set "IMAGE_EXISTS=true"
-)
+for /f %%i in ('docker images -q ipcrawler 2^>nul') do set "IMAGE_ID=%%i"
 
-if "!IMAGE_EXISTS!"=="false" (
+if "%IMAGE_ID%"=="" (
+    echo ℹ️ ipcrawler Docker image not found
+    echo.
     echo 🔨 Building ipcrawler Docker image (this may take a few minutes)...
     echo.
     docker build -t ipcrawler .
@@ -53,13 +53,14 @@ if "!IMAGE_EXISTS!"=="false" (
     echo.
 ) else (
     echo ✅ ipcrawler Docker image found
+    echo 🚀 Image ready! Starting Docker terminal...
     echo.
 )
 
 REM Create results directory if it doesn't exist
 if not exist "results" mkdir results
 
-echo 🚀 Starting ipcrawler Docker container...
+echo 🚀 Starting ipcrawler Docker terminal...
 echo.
 echo 📋 Available commands once inside:
 echo   • ipcrawler --help          (Show help)

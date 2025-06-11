@@ -2,6 +2,18 @@ import asyncio, colorama, os, re, string, sys, unidecode
 from colorama import Fore, Style
 from ipcrawler.config import config
 
+# Rich support for enhanced verbosity output (optional)
+try:
+	from rich.console import Console
+	from rich.text import Text
+	from rich.panel import Panel
+	from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+	RICH_AVAILABLE = True
+	rich_console = Console()
+except ImportError:
+	RICH_AVAILABLE = False
+	rich_console = None
+
 def slugify(name):
 	return re.sub(r'[\W_]+', '-', unidecode.unidecode(name).lower()).strip('-')
 
@@ -77,6 +89,98 @@ def debug(*args, color=Fore.GREEN, sep=' ', end='\n', file=sys.stdout, **kvargs)
 		cprint(*args, color=color, char='-', sep=sep, end=end, file=file, frame_index=2, **kvargs)
 
 def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
+	# Enhanced Rich output for certain verbosity messages
+	if RICH_AVAILABLE and 'verbosity' in kvargs:
+		message = sep.join(str(arg) for arg in args)
+		verbosity_level = kvargs['verbosity']
+		
+		# Level 1 (-v): Plugin starts and discoveries
+		if config['verbose'] >= 1 and verbosity_level == 1:
+			# Enhanced plugin start messages
+			if 'running against' in message and ('Port scan' in message or 'Service scan' in message):
+				# Extract plugin info
+				if 'Port scan' in message:
+					scan_type = "🔍 PORT"
+					color = "blue"
+				else:
+					scan_type = "🔧 SERVICE" 
+					color = "green"
+				
+				# Parse the message for plugin name and target
+				import re
+				plugin_match = re.search(r'(Port scan|Service scan) ([^{]+?) \(([^)]+)\)', message)
+				target_match = re.search(r'against ([^{]+?)$', message.replace('{rst}', '').replace('{byellow}', '').replace('{rst}', ''))
+				
+				if plugin_match and target_match:
+					plugin_name = plugin_match.group(2).strip()
+					plugin_slug = plugin_match.group(3).strip()
+					target = target_match.group(1).strip()
+					
+					rich_text = Text()
+					rich_text.append(f"[{scan_type}] ", style=f"bold {color}")
+					rich_text.append(f"{plugin_name} ", style="bold cyan")
+					rich_text.append(f"({plugin_slug}) ", style="dim")
+					rich_text.append("→ ", style="bold white")
+					rich_text.append(f"{target}", style="bold yellow")
+					
+					rich_console.print(rich_text)
+					return
+			
+			# Enhanced discovery messages  
+			elif 'Discovered open port' in message:
+				import re
+				port_match = re.search(r'Discovered open port ([^{]+?) on ([^{]+?)$', message.replace('{rst}', '').replace('{bmagenta}', '').replace('{byellow}', ''))
+				if port_match:
+					port = port_match.group(1).strip()
+					target = port_match.group(2).strip()
+					
+					rich_text = Text()
+					rich_text.append("🎯 DISCOVERED ", style="bold green")
+					rich_text.append(f"{port} ", style="bold magenta")
+					rich_text.append("on ", style="dim")
+					rich_text.append(f"{target}", style="bold yellow")
+					
+					rich_console.print(rich_text)
+					return
+		
+		# Level 2 (-vv): Completion messages with timing
+		elif config['verbose'] >= 2 and verbosity_level == 2:
+			if 'finished in' in message and ('Port scan' in message or 'Service scan' in message):
+				import re
+				plugin_match = re.search(r'(Port scan|Service scan) ([^{]+?) \(([^)]+)\)', message)
+				target_match = re.search(r'against ([^{]+?) finished in (.+)$', message.replace('{rst}', '').replace('{byellow}', ''))
+				
+				if plugin_match and target_match:
+					scan_type = "✅ COMPLETED" if 'Port scan' in message else "✅ FINISHED"
+					plugin_name = plugin_match.group(2).strip()
+					plugin_slug = plugin_match.group(3).strip()
+					target = target_match.group(1).strip()
+					timing = target_match.group(2).strip()
+					
+					rich_text = Text()
+					rich_text.append(f"{scan_type} ", style="bold green")
+					rich_text.append(f"{plugin_name} ", style="bold cyan")
+					rich_text.append(f"({plugin_slug}) ", style="dim")
+					rich_text.append("on ", style="dim")
+					rich_text.append(f"{target} ", style="bold yellow")
+					rich_text.append("in ", style="dim")
+					rich_text.append(f"{timing}", style="bold blue")
+					
+					rich_console.print(rich_text)
+					return
+			
+			# Enhanced pattern match messages
+			elif 'Matched Pattern:' in message or 'pattern' in message.lower():
+				rich_text = Text()
+				rich_text.append("🔍 PATTERN ", style="bold magenta")
+				# Extract the actual pattern content
+				pattern_content = message.replace('{rst}', '').replace('{bmagenta}', '').replace('{bright}', '').replace('{yellow}', '').replace('{crst}', '').replace('{bgreen}', '')
+				rich_text.append(pattern_content, style="cyan")
+				
+				rich_console.print(rich_text)
+				return
+	
+	# Fall back to standard cprint
 	cprint(*args, color=Fore.BLUE, char='*', sep=sep, end=end, file=file, frame_index=2, **kvargs)
 
 def warn(*args, sep=' ', end='\n', file=sys.stderr,**kvargs):
@@ -122,7 +226,16 @@ class CommandStreamReader(object):
 				continue
 
 			if line != '':
-				info('{bright}[{yellow}' + self.target.address + '{crst}/{bgreen}' + self.tag + '{crst}]{rst} ' + line.strip().replace('{', '{{').replace('}', '}}'), verbosity=3)
+				# For verbosity 3, enhance only slightly to avoid overwhelming output
+				if RICH_AVAILABLE and config['verbose'] >= 3:
+					# Very minimal enhancement - just add a subtle indicator
+					rich_text = Text()
+					rich_text.append("│ ", style="dim blue")
+					rich_text.append(f"[{self.target.address}/{self.tag}] ", style="dim")
+					rich_text.append(line.strip(), style="white")
+					rich_console.print(rich_text)
+				else:
+					info('{bright}[{yellow}' + self.target.address + '{crst}/{bgreen}' + self.tag + '{crst}]{rst} ' + line.strip().replace('{', '{{').replace('}', '}}'), verbosity=3)
 
 			# Check lines for pattern matches.
 			for p in self.patterns:

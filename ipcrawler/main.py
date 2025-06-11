@@ -10,6 +10,17 @@ except ModuleNotFoundError:
 	print('One or more required modules was not installed. Please run or re-run: ' + ('sudo ' if os.getuid() == 0 else '') + 'python3 -m pip install -r requirements.txt')
 	sys.exit(1)
 
+# Rich support for enhanced help (optional)
+try:
+	from rich.console import Console
+	from rich.table import Table
+	from rich.panel import Panel
+	from rich.text import Text
+	from rich.columns import Columns
+	RICH_AVAILABLE = True
+except ImportError:
+	RICH_AVAILABLE = False
+
 colorama.init()
 
 from ipcrawler.config import config, configurable_keys, configurable_boolean_keys
@@ -18,6 +29,138 @@ from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
 VERSION = "2.0.36"
+
+def show_rich_help():
+	"""Display beautiful help output using Rich library"""
+	console = Console()
+	
+	# Header
+	console.print(Panel.fit(
+		"[bold blue]🕷️  ipcrawler[/bold blue] - Network Reconnaissance Tool\n[dim]v" + VERSION + " - Simplified AutoRecon for OSCP & CTFs[/dim]",
+		border_style="blue"
+	))
+	
+	# Usage
+	console.print("\n[bold green]Basic Usage:[/bold green]")
+	usage_table = Table(show_header=False, box=None, padding=(0, 2))
+	usage_table.add_column("Command", style="cyan")
+	usage_table.add_column("Description")
+	
+	usage_table.add_row("ipcrawler 10.10.10.1", "Basic scan of single target")
+	usage_table.add_row("ipcrawler -v 10.10.10.1", "Verbose scan (shows progress)")
+	usage_table.add_row("ipcrawler -p 80,443 target.com", "Scan specific ports only")
+	usage_table.add_row("ipcrawler --timeout 30 10.10.10.0/24", "30min scan of subnet")
+	
+	console.print(usage_table)
+	
+	# Essential Options
+	console.print("\n[bold yellow]🎯 Essential Options:[/bold yellow]")
+	essential_table = Table(show_header=False, box=None, padding=(0, 1))
+	essential_table.add_column("Option", style="cyan", width=25)
+	essential_table.add_column("Description", width=55)
+	
+	essential_table.add_row("[dim][[/dim][bold cyan]-v[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--verbose[/bold cyan][dim]][/dim]", "Show scan progress [dim](use -v, -vv, -vvv)[/dim]")
+	essential_table.add_row("[dim][[/dim][bold cyan]-p[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--ports[/bold cyan][dim]][/dim]", "Port specification [dim](default: top 1000)[/dim]\n[yellow]Examples:[/yellow] 80,443 or 1-1000 or T:80,U:53")
+	essential_table.add_row("[dim][[/dim][bold cyan]-t[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--target-file[/bold cyan][dim]][/dim]", "Read targets from file")
+	essential_table.add_row("[dim][[/dim][bold cyan]-o[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--output[/bold cyan][dim]][/dim]", "Output directory [dim](default: ./results)[/dim]")
+	essential_table.add_row("[dim][[/dim][bold cyan]--timeout[/bold cyan][dim]][/dim]", "Max scan time in minutes")
+	essential_table.add_row("[dim][[/dim][bold cyan]--exclude-tags[/bold cyan][dim]][/dim]", "Skip plugin types [dim](e.g. bruteforce)[/dim]")
+	
+	console.print(essential_table)
+	
+	# Advanced Options
+	console.print("\n[bold magenta]⚙️  Advanced Options:[/bold magenta]")
+	advanced_table = Table(show_header=False, box=None, padding=(0, 1))
+	advanced_table.add_column("Option", style="cyan", width=25)
+	advanced_table.add_column("Description", width=55)
+	
+	advanced_table.add_row("[dim][[/dim][bold cyan]-m[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--max-scans[/bold cyan][dim]][/dim]", "Concurrent scan limit [dim](default: 50)[/dim]")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--force-services[/bold cyan][dim]][/dim]", "Force service detection\n[yellow]Example:[/yellow] tcp/80/http tcp/443/https")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--single-target[/bold cyan][dim]][/dim]", "Don't create target subdirectory")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--proxychains[/bold cyan][dim]][/dim]", "Use with proxychains")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--nmap[/bold cyan][dim]][/dim]", "Override nmap options")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--heartbeat[/bold cyan][dim]][/dim]", "Status update interval in seconds")
+	
+	console.print(advanced_table)
+	
+	# Port Syntax Examples
+	console.print("\n[bold cyan]🔌 Port Syntax Examples:[/bold cyan]")
+	port_examples = Table(show_header=False, box=None, padding=(0, 1))
+	port_examples.add_column("Syntax", style="yellow", width=20)
+	port_examples.add_column("Description", width=40)
+	
+	port_examples.add_row("80,443,8080", "Specific ports (TCP)")
+	port_examples.add_row("1-1000", "Port range")
+	port_examples.add_row("T:22,80", "TCP ports only")
+	port_examples.add_row("U:53,161", "UDP ports only")
+	port_examples.add_row("B:53", "Both TCP and UDP")
+	port_examples.add_row("80,T:22,U:53", "Mixed specification")
+	
+	console.print(port_examples)
+	
+	# Verbosity Levels
+	console.print("\n[bold blue]📢 Verbosity Levels:[/bold blue]")
+	verb_table = Table(show_header=False, box=None, padding=(0, 1))
+	verb_table.add_column("Level", style="green", width=12)
+	verb_table.add_column("Description")
+	
+	verb_table.add_row("(none)", "Minimal output - start/end announcements only")
+	verb_table.add_row("-v", "Show discovered services and plugin starts")
+	verb_table.add_row("-vv", "Show commands executed and pattern matches") 
+	verb_table.add_row("-vvv", "Maximum - live output from all commands")
+	
+	console.print(verb_table)
+	
+	# Other Options
+	console.print("\n[bold red]🔧 Other Options:[/bold red]")
+	other_table = Table(show_header=False, box=None, padding=(0, 1))
+	other_table.add_column("Option", style="cyan", width=25)
+	other_table.add_column("Description")
+	
+	other_table.add_row("[dim][[/dim][bold cyan]-l[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--list[/bold cyan][dim]][/dim]", "List available plugins")
+	other_table.add_row("[dim][[/dim][bold cyan]--version[/bold cyan][dim]][/dim]", "Show version and exit")
+	other_table.add_row("[dim][[/dim][bold cyan]-h[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--help[/bold cyan][dim]][/dim]", "Show this help message")
+	
+	console.print(other_table)
+	
+	# Footer tips
+	console.print(Panel.fit(
+		"[bold green]💡 Pro Tips:[/bold green]\n" +
+		"• Start with [cyan]ipcrawler -v target[/cyan] to see progress\n" +
+		"• Check [cyan]results/target/scans/_manual_commands.txt[/cyan] for additional tests\n" +
+		"• Use [cyan]--timeout 60[/cyan] for time-limited scans (OSCP exam)\n" +
+		"• Run [cyan]ipcrawler --list[/cyan] to see all available plugins",
+		border_style="green"
+	))
+
+def show_fallback_help(parser):
+	"""Fallback help when Rich is not available"""
+	print("🕷️  ipcrawler v" + VERSION + " - Network Reconnaissance Tool")
+	print("=" * 60)
+	print()
+	print("USAGE:")
+	print("  ipcrawler [options] target1 [target2 ...]")
+	print()
+	print("EXAMPLES:")
+	print("  ipcrawler -v 10.10.10.1                    # Verbose scan")
+	print("  ipcrawler -p 80,443 target.com             # Specific ports")
+	print("  ipcrawler --timeout 30 10.10.10.0/24      # Time-limited")
+	print()
+	print("ESSENTIAL OPTIONS:")
+	print("  -v, --verbose         Show scan progress (-v, -vv, -vvv)")
+	print("  -p, --ports          Port specification (default: top 1000)")
+	print("                       Examples: 80,443 or 1-1000 or T:80,U:53")
+	print("  -t, --target-file    Read targets from file")
+	print("  -o, --output         Output directory (default: ./results)")
+	print("  --timeout           Max scan time in minutes")
+	print("  --exclude-tags      Skip plugin types (e.g. bruteforce)")
+	print()
+	print("For complete options, install Rich: pip install rich")
+	print("Then run: ipcrawler --help")
+	print()
+	
+	# Show standard argparse help as well
+	parser.print_help()
 
 if not os.path.exists(config['config_dir']):
 	shutil.rmtree(config['config_dir'], ignore_errors=True, onerror=None)
@@ -1142,9 +1285,18 @@ async def run():
 		if key not in other_options:
 			ipcrawler.argparse.set_defaults(**{key: val})
 
-	parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit.')
+	# Custom help handling
+	parser.add_argument('-h', '--help', action='store_true', help='Show this help message and exit.')
 	parser.error = lambda s: fail(s[0].upper() + s[1:])
 	args = parser.parse_args()
+	
+	# Handle custom help
+	if args.help:
+		if RICH_AVAILABLE:
+			show_rich_help()
+		else:
+			show_fallback_help(parser)
+		sys.exit(0)
 
 	args_dict = vars(args)
 	for key in args_dict:
