@@ -62,7 +62,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 | **🐧 HTB Local Setup** | **🍎 Docker on macOS** |
 |:--:|:--:|
-| [![HTB Setup](https://img.youtube.com/vi/lBXAzpUrtlw/maxresdefault.jpg)](https://youtu.be/lBXAzpUrtlw) | [![macOS Setup](https://img.youtube.com/vi/i6Y5Rn0--kA/maxresdefault.jpg)](https://youtu.be/i6Y5Rn0--kA) |
+| <a href="https://youtu.be/lBXAzpUrtlw" target="_blank"><img src="https://img.youtube.com/vi/lBXAzpUrtlw/maxresdefault.jpg" alt="HTB Setup" width="400"></a> | <a href="https://youtu.be/i6Y5Rn0--kA" target="_blank"><img src="https://img.youtube.com/vi/i6Y5Rn0--kA/maxresdefault.jpg" alt="macOS Setup" width="400"></a> |
 | **Complete setup on HTB machines** | **Docker installation & usage on macOS** |
 | `make setup` walkthrough | `make setup-docker` demonstration |
 
