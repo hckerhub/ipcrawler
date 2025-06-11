@@ -41,7 +41,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 ## 📋 Prerequisites
 
 ### 🪟 Windows
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) - **Manual installation required**
 
 ### 🐧 Linux/macOS  
 - **Python 3.8+**: [python.org](https://www.python.org/downloads/) or package manager
@@ -53,66 +53,193 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
   ```
 - **make**: Usually pre-installed or `sudo apt install make` or `brew install make`
 
-## 🚀 Quick Start
+## 🚀 Quick Start Guide
 
-### 🪟 Windows Users
-1. **Install Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
-2. **Run the launcher:**
+### 📖 Step-by-Step Setup Instructions
+
+#### 🪟 **For Windows Users (Docker Recommended)**
+
+**Step 1: Install Docker Desktop**
+1. Download [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
+2. Install and start Docker Desktop
+3. Verify Docker is running: open PowerShell/CMD and run `docker --version`
+
+**Step 2: Get ipcrawler**
 ```cmd
 git clone https://github.com/hckerhub/ipcrawler.git
 cd ipcrawler
+```
+
+**Step 3: Run ipcrawler**
+```cmd
+# Double-click this file OR run from command line:
 ipcrawler-windows.bat
 ```
 
-The launcher checks for Docker, builds the image (if needed), and opens an interactive terminal with all tools ready.
+**What the `.bat` file does:**
+- ✅ Checks if Docker is installed and running
+- 🔨 Builds the ipcrawler Docker image automatically (first time only)
+- 🚀 Opens an interactive terminal with all security tools pre-installed
+- 💾 Maps your `results/` folder so scan results persist after closing
 
-### 🐧 Linux/macOS Users
+**Inside the Docker container, you can run:**
+```bash
+ipcrawler --help           # Show beautiful help with examples
+ipcrawler 127.0.0.1        # Test scan localhost
+ipcrawler 10.10.10.1       # Scan your target
+exit                       # Close container
+```
 
-**Prerequisites:** Python 3.8+, make ([see installation](#-prerequisites))
+#### 🐧 **For Linux/macOS Users (Local or Docker)**
 
+**Option 1: Local Installation (Recommended for Linux)**
 ```bash
 # One-liner setup
 git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
 
-# Or if you don't have make installed
+# If 'make' is not installed, run bootstrap first:
 ./bootstrap.sh && make setup
 ```
 
-### 🐳 Docker Setup (All Platforms)
+**What `bootstrap.sh` does:**
+- 🔍 Detects your operating system (Ubuntu, Kali, macOS, Arch, etc.)
+- 📦 Installs `make` automatically using your system's package manager
+- 🎯 Provides specific instructions for your OS if automatic installation fails
 
-**Requires manual Docker installation, then simple setup!**
+**What `make setup` does:**
+- 🐍 Creates a Python virtual environment in `./venv/`
+- 📦 Installs all Python dependencies (Rich, colorama, etc.)
+- 🔧 Downloads and installs security tools (nmap, nikto, dirb, etc.)
+- 🔗 Creates global `ipcrawler` command that you can run from anywhere
+- ✅ Verifies everything is working
 
+**Option 2: Docker Setup (Works on all platforms)**
 ```bash
-# 1. Install Docker first (platform-specific):
-# Windows: Docker Desktop from docker.com
-# macOS: brew install --cask docker or Docker Desktop
-# Linux: sudo apt install docker.io (or equivalent)
+# Prerequisites: Install Docker first for your system:
+# Ubuntu/Debian: sudo apt install docker.io
+# macOS: brew install --cask docker (or Docker Desktop)
+# Then:
 
-# 2. Clone and setup ipcrawler
 git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler
 make setup-docker
-
-# 3. Start additional sessions
-make docker-cmd
 ```
 
-### 🔧 Make Commands (Linux/macOS Only)
+**What `make setup-docker` does:**
+- ✅ Checks if Docker is installed and running
+- 🔨 Builds the ipcrawler Docker image with all tools
+- 🚀 Opens an interactive Docker terminal
+- 💾 Maps your `results/` folder for persistent storage
 
-| Command | Description |
-|---------|-------------|
-| `make setup` | Install all tools and create virtual environment |
-| `make setup-docker` | Check Docker + build image + open interactive terminal |
-| `make docker-cmd` | Start additional interactive Docker sessions |
-| `make clean` | Remove everything (preserves scan results) |
-| `make update` | Update tools and Docker image |
+### 🔧 Understanding the Tools
 
-**Windows users:** Use `ipcrawler-windows.bat` - no make commands needed!
+#### `ipcrawler-cmd` (Local Installation Only)
+- **Purpose**: Global command wrapper created during `make setup`
+- **Location**: Installed to `/usr/local/bin/ipcrawler` (or similar system PATH)
+- **What it does**: Activates the virtual environment and runs ipcrawler
+- **Usage**: Allows you to run `ipcrawler target` from any directory
+- **Do you need it?** Yes for local installation, not needed for Docker
+
+#### Make Commands Reference
+
+| Command | When to Use | What It Does |
+|---------|------------|--------------|
+| `./bootstrap.sh` | First time, if `make` is missing | Installs `make` for your OS |
+| `make setup` | Local installation | Full local setup with tools |
+| `make setup-docker` | Docker installation | Docker build + interactive session |
+| `make docker-cmd` | Docker users | Start additional Docker sessions |
+| `make clean` | When uninstalling | Removes everything (preserves results) |
+| `make update` | Periodic updates | Updates tools and Docker image |
+
+**Windows users:** Only use `ipcrawler-windows.bat` - no make commands needed!
+
+## ⚙️ Configuration Files
+
+ipcrawler uses TOML configuration files for customization. After running setup, config files are created:
+
+### 📍 Configuration Locations
+
+**Local Installation:**
+- Main config: `~/.config/ipcrawler/config.toml`
+- Global settings: `~/.config/ipcrawler/global.toml`
+
+**Docker Installation:**
+- Config files are inside the container at `/opt/ipcrawler/ipcrawler/`
+- Changes persist only during the session
+
+### 📝 `config.toml` - Main Configuration
+
+Controls ipcrawler behavior and plugin settings:
+
+```toml
+# Basic ipcrawler options
+# nmap-append = '-T3'          # Add flags to nmap commands
+# verbose = 1                  # Default verbosity level
+# max-scans = 30              # Maximum concurrent scans
+
+# Global options
+# [global]
+# username-wordlist = '/usr/share/seclists/Usernames/cirt-default-usernames.txt'
+
+# Plugin-specific options
+# [dirbuster]
+# threads = 50
+# wordlist = [
+#     '/usr/share/seclists/Discovery/Web-Content/common.txt',
+#     '/usr/share/seclists/Discovery/Web-Content/big.txt'
+# ]
+```
+
+**Common configurations:**
+```toml
+# For faster scans
+nmap-append = '-T4'
+max-scans = 20
+
+# For OSCP exam (conservative)
+nmap-append = '-T3'
+max-scans = 10
+
+# Verbose by default
+verbose = 1
+```
+
+### 🌐 `global.toml` - Global Settings
+
+Defines global options and pattern matching:
+
+```toml
+# Default wordlists
+[global.username-wordlist]
+default = '/usr/share/seclists/Usernames/top-usernames-shortlist.txt'
+
+[global.password-wordlist]  
+default = '/usr/share/seclists/Passwords/darkweb2017-top100.txt'
+
+[global.domain]
+help = 'Domain for DNS/AD enumeration'
+
+# Pattern matching for interesting findings
+[[pattern]]
+description = 'CVE Identified: {match}'
+pattern = '(CVE-\d{4}-\d{4,7})'
+
+[[pattern]]
+description = 'Potential vulnerability: {match}'
+pattern = 'State: (?:(?:LIKELY\_?)?VULNERABLE)'
+```
+
+**How to customize:**
+1. **Uncomment lines** by removing the `#` symbol
+2. **Edit values** to match your preferences
+3. **Add new sections** for additional plugins
+4. **Save and restart** ipcrawler for changes to take effect
 
 ## 🔥 Key Features
 
 - **🎯 Smart Enumeration**: Automatically launches appropriate tools based on discovered services
 - **⚡ Multi-threading**: Scan multiple targets concurrently
 - **📁 Organized Output**: Clean directory structure for results
+- **📋 Rich Summary Reports**: Beautiful HTML reports with collapsible sections
 - **🔧 Highly Configurable**: Customizable via config files and command-line options
 - **🏷️ Plugin System**: Extensive plugin ecosystem for different services
 - **⏱️ Time Management**: Global and per-target timeouts
@@ -127,6 +254,10 @@ results/
     ├── exploit/          # Exploit code and payloads
     ├── loot/            # Credentials, hashes, files
     ├── report/          # Flags, notes, screenshots
+    │   ├── Full_Report.html     # 🌟 Rich HTML summary
+    │   ├── local.txt            # Local flag
+    │   ├── proof.txt            # Proof flag
+    │   └── screenshots/         # Screenshots
     └── scans/           # All scan results
         ├── _commands.log         # Commands executed
         ├── _manual_commands.txt  # Suggested manual commands
@@ -152,20 +283,24 @@ ipcrawler --exclude-tags bruteforce 10.10.10.1
 
 # Time-limited scan (60 minutes max)
 ipcrawler --timeout 60 10.10.10.1
+
+# Multiple targets
+ipcrawler 10.10.10.1 10.10.10.2 10.10.10.3
+
+# Custom nmap timing
+ipcrawler --nmap-append '-T3' 10.10.10.1
 ```
 
 ### Results Location
-- **Host machine**: `./results/` (persistent after container exits)
-- **Inside container**: `/scans/` (mounted volume)
+- **Local installation**: `./results/` in the directory where you ran ipcrawler
+- **Docker installation**: `./results/` on your host machine (mapped from container)
 
 ### Cleanup
-The `make clean` command provides intelligent cleanup for both local and Docker installations:
-
 ```bash
 make clean
 ```
 
-**What it removes:**
+**What `make clean` removes:**
 - ✅ Virtual environment and local installation
 - ✅ Docker images and containers (if they exist)
 - ✅ Empty results directories
@@ -173,13 +308,8 @@ make clean
 
 **What it preserves:**
 - 🛡️ Results directories containing scan data
+- 🛡️ Configuration files in `~/.config/ipcrawler/`
 - 🛡️ Non-ipcrawler Docker resources
-
-## ⚙️ Configuration
-
-ipcrawler uses the same configuration system as AutoRecon. Config files are located at:
-- `~/.config/ipcrawler/config.toml` - Main configuration
-- `~/.config/ipcrawler/global.toml` - Global settings
 
 ## 🎓 Perfect for OSCP & CTFs
 
@@ -191,22 +321,23 @@ ipcrawler excels in time-constrained environments:
 ## 💡 Pro Tips
 
 1. **Beautiful Help**: Run `ipcrawler --help` to see the enhanced help with examples and organized sections
-2. **Start Early**: Launch ipcrawler on all targets at the beginning
-3. **Use Rich Verbosity**: `-v` shows visual progress, `-vv` shows timing, `-vvv` shows live output
-4. **Check Manual Commands**: Review `_manual_commands.txt` for additional tests
-5. **Organized Results**: The directory structure keeps everything organized
-6. **Multiple Sessions**: Run different scan types in parallel
-7. **Easy Cleanup**: Use `make clean` for complete removal when done
-8. **Safe Results**: Cleanup preserves scan data in results directories
+2. **Rich Summary Report**: Check `Full_Report.html` in each target's report directory for a comprehensive HTML summary
+3. **Start Early**: Launch ipcrawler on all targets at the beginning
+4. **Use Rich Verbosity**: `-v` shows visual progress, `-vv` shows timing, `-vvv` shows live output
+5. **Check Manual Commands**: Review `_manual_commands.txt` for additional tests
+6. **Organized Results**: The directory structure keeps everything organized
+7. **Multiple Sessions**: Run different scan types in parallel
+8. **Easy Cleanup**: Use `make clean` for complete removal when done
+9. **Safe Results**: Cleanup preserves scan data in results directories
 
 ## 🔍 Enhanced Verbosity Levels
 
 | Flag | Output Level | Rich Enhancements |
 |------|-------------|-------------------|
 | (none) | Minimal - start/end announcements | Standard output |
-| `-v` | Plugin starts, discoveries | 🔍 **Visual icons**, colored progress indicators |
-| `-vv` | Commands, timing, patterns | ✅ **Completion status**, timing info, pattern highlights |
-| `-vvv` | Live command output | │ **Subtle formatting** to avoid overwhelming |
+| [`-v`] | Plugin starts, discoveries | 🔍 **Visual icons**, colored progress indicators |
+| [`-vv`] | Commands, timing, patterns | ✅ **Completion status**, timing info, pattern highlights |
+| [`-vvv`] | Live command output | │ **Subtle formatting** to avoid overwhelming |
 
 **Example Rich Output:**
 ```
@@ -238,7 +369,7 @@ ipcrawler excels in time-constrained environments:
 ### Enhanced Help System
 - **🎯 Organized Sections**: Essential Options, Advanced Options, Port Syntax Examples
 - **📋 Clear Examples**: Real command examples for every feature
-- **🔤 Visual Flag Formatting**: `[-v] [--verbose]` style makes options easy to scan
+- **🔤 Visual Flag Formatting**: [`-v`] [`--verbose`] style makes options easy to scan
 - **💡 Pro Tips**: OSCP-specific advice and best practices
 - **🎨 Consistent Styling**: Professional color scheme throughout
 
@@ -268,19 +399,11 @@ If Rich is not available, ipcrawler seamlessly falls back to standard colorama o
 
 - **Try `ipcrawler --help`** - Beautiful help with examples and organized sections
 - **Start early** - Launch on all targets while focusing on one
-- **Use `-v`** - Shows visual progress with Rich icons and colors
+- **Use [`-v`]** - Shows visual progress with Rich icons and colors
 - **Check `_manual_commands.txt`** - Additional tests to run
 - **Results in `./results/`** - Preserved after cleanup
 
-## 🔍 Verbosity: None | `-v` | `-vv` | `-vvv` (minimal to maximum output)
-
-## 🏆 OSCP Success Stories
-
-*"AutoRecon was invaluable during my OSCP exam... I would strongly recommend this utility."* **- b0ats** (5/5 hosts)
-
-*"The strongest feature is the speed... in minutes I had all output waiting for me."* **- tr3mb0** (4/5 hosts)
-
-*ipcrawler provides the same power with easier setup!*
+## 🔍 Verbosity: None | [`-v`] | [`-vv`] | [`-vvv`] (minimal to maximum output)
 
 ## 🤝 Contributing
 
