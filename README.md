@@ -1,6 +1,4 @@
 # 🕷️ ipcrawler
-> *"It's like bowling with bumpers."* - [@ippsec](https://twitter.com/ippsec)
-
 > *"The only person you are destined to become is the person you decide to be."* - Ralph Waldo Emerson
 
 A simplified, streamlined version of **AutoRecon** while keeping core functionality of autorecon - the multi-threaded network reconnaissance tool that performs automated enumeration of services for CTFs, OSCP, and penetration testing environments.
