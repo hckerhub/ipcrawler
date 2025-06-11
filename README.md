@@ -67,7 +67,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
 
 **Step 2: Get ipcrawler**
 ```cmd
-git clone https://github.com/hckerhub/ipcrawler.git
+git clone https://github.com/neur0map/ipcrawler.git
 cd ipcrawler
 ```
 
@@ -96,7 +96,7 @@ exit                       # Close container
 **Option 1: Local Installation (Recommended for Linux)**
 ```bash
 # One-liner setup
-git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setup
+git clone https://github.com/neur0map/ipcrawler.git && cd ipcrawler && make setup
 
 # If 'make' is not installed, run bootstrap first:
 ./bootstrap.sh && make setup
@@ -121,7 +121,7 @@ git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler && make setu
 # macOS: brew install --cask docker (or Docker Desktop)
 # Then:
 
-git clone https://github.com/hckerhub/ipcrawler.git && cd ipcrawler
+git clone https://github.com/neur0map/ipcrawler.git && cd ipcrawler
 make setup-docker
 ```
 
