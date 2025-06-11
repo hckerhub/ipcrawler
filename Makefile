@@ -1,13 +1,14 @@
 .PHONY: setup clean setup-docker docker-cmd help update
 
 setup:
-	@echo "Setting up ipcrawler..."
-	@echo ""
-	@./scripts/system-check.sh
-	@echo ""
-	@./scripts/install-tools.sh
-	@echo ""
-	@./scripts/setup-python.sh
+	@echo "Setting up ipcrawler..." && \
+	echo "" && \
+	./scripts/system-check.sh && \
+	echo "" && \
+	. scripts/detect-os.sh && \
+	./scripts/install-tools.sh "$$OS_ID" "$$OS_ID_LIKE" "$$WSL_DETECTED" && \
+	echo "" && \
+	./scripts/setup-python.sh
 
 clean:
 	@./scripts/cleanup.sh
