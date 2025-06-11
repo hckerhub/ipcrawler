@@ -52,6 +52,7 @@ A simplified, streamlined version of **AutoRecon** - the multi-threaded network 
   # macOS: brew install python3
   ```
 - **make**: Usually pre-installed or `sudo apt install make` or `brew install make`
+- **seclists**: `sudo apt install seclists` (Required for macOS only)
 
 ## 🚀 Quick Start Guide
 
