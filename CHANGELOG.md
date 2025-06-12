@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2024-01-15 🎉
+## [1.0.0] - 2025-06-10 🎉
 
 ### 🚀 Initial Release
 **ipcrawler** v1.0.0 marks the first stable release of our simplified AutoRecon fork, designed to make network reconnaissance accessible for CTFs, OSCP, and penetration testing.
@@ -88,7 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 🚀 Future Goal
 
 ### 🎯 [1.1.0] - YOLO Mode & Enhanced Automation
-**Target Date**: Q2 2024
+**Target Date**: Q3 2025
 
 #### 🚀 Full YOLO Mode
 - **Auto-Execute Recommended Commands**: Automatically run all commands from `_manual_commands.txt`
