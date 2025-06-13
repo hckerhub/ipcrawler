@@ -10,7 +10,7 @@ class AllTCPPortScan(PortScan):
 		self.description = 'Performs an Nmap scan of all TCP ports.'
 		self.type = 'tcp'
 		self.specific_ports = True
-		self.tags = ['default', 'default-port-scan', 'long']
+		self.tags = ['default', 'default-port-scan', 'safe', 'long']
 
 	async def run(self, target):
 		if config['proxychains']:

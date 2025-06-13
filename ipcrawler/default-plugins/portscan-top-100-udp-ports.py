@@ -10,7 +10,7 @@ class Top100UDPPortScan(PortScan):
 		self.description = 'Performs an Nmap scan of the top 100 UDP ports.'
 		self.type = 'udp'
 		self.specific_ports = True
-		self.tags = ['default', 'default-port-scan', 'long']
+		self.tags = ['default', 'default-port-scan', 'safe', 'long']
 
 	async def run(self, target):
 		# Only run UDP scan if user is root.
