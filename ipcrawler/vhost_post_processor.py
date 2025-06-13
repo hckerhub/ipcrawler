@@ -31,8 +31,10 @@ class VHostPostProcessor:
     def discover_vhosts_from_files(self):
         """Parse VHost discovery files and extract hostnames"""
         for scan_dir in self.scan_directories:
-            # Extract IP from the scan directory name (which should be the target IP)
-            scan_dir_ip = os.path.basename(scan_dir)
+            # Extract IP from the parent directory of scan_dir (scan_dir is usually .../IP/scans/)
+            # So we need the parent directory name which contains the IP
+            parent_dir = os.path.dirname(scan_dir)
+            scan_dir_ip = os.path.basename(parent_dir)
             
             for root, dirs, files in os.walk(scan_dir):
                 for file in files:

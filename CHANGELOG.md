@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2025-01-12 🔥
+
+### 🔥 HOTFIX - Critical IP Extraction Bug
+- **CRITICAL**: Fixed IP extraction logic to use parent directory instead of scan directory name
+- **Root Cause**: VHost post-processor was extracting IP from "scans" directory instead of parent target directory
+- **Impact**: Now correctly adds `10.10.11.68 planning.htb` instead of `scans planning.htb` to /etc/hosts
+- **Directory Structure**: Properly handles ipcrawler's structure: `results/IP/scans/` → extracts IP from parent directory
+
+---
+
 ## [1.1.2] - 2025-01-12 🚨
 
 ### 🚨 Critical Bug Fixes
