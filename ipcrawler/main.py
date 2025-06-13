@@ -28,7 +28,7 @@ from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, 
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
-VERSION = "1.0"
+VERSION = "1.1.0"
 
 def show_rich_help():
 	"""Display beautiful help output using Rich library"""
@@ -1782,6 +1782,31 @@ async def run():
 		elapsed_time = calculate_elapsed_time(start_time)
 		info('{bright}Finished scanning all targets in ' + elapsed_time + '!{rst}')
 		info('{bright}Don\'t forget to check out more commands to run manually in the _manual_commands.txt file in each target\'s scans directory!')
+
+		# VHost Discovery Post-Processing
+		if config.get('vhost_discovery', {}).get('enabled', True):
+			try:
+				from ipcrawler.vhost_post_processor import VHostPostProcessor
+				
+				# Check if any VHost files were created
+				vhost_files_found = False
+				for target in ipcrawler.completed_targets:
+					for root, dirs, files in os.walk(target.scandir):
+						if any(f.startswith('vhost_redirects_') and f.endswith('.txt') for f in files):
+							vhost_files_found = True
+							break
+					if vhost_files_found:
+						break
+				
+				if vhost_files_found:
+					info('{bright}🌐 Running VHost Discovery Post-Processing...{rst}')
+					processor = VHostPostProcessor('scans')
+					processor.run_interactive_session()
+				
+			except ImportError:
+				warn('VHost post-processor not available. Skipping VHost management.')
+			except Exception as e:
+				warn(f'VHost post-processing failed: {e}')
 
 	if ipcrawler.missing_services:
 		warn('{byellow}ipcrawler identified the following services, but could not match them to any plugins based on the service name. Please report these to Tib3rius: ' + ', '.join(ipcrawler.missing_services) + '{rst}')

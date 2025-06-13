@@ -4,6 +4,23 @@
 # verbose = 1
 # max-scans = 30
 
+# Configure VHost discovery options
+[vhost_discovery]
+# Enable automatic VHost discovery via HTTP redirects
+enabled = true
+
+# Automatically prompt to add discovered VHosts to /etc/hosts after scan
+auto_add_hosts = true
+
+# Request timeout for VHost discovery (seconds)
+request_timeout = 10
+
+# User agent for VHost discovery requests
+user_agent = "ipcrawler-vhost-hunter/1.0"
+
+# Backup /etc/hosts before making changes
+backup_hosts_file = true
+
 # Configure global options here.
 # [global]
 # username-wordlist = '/usr/share/seclists/Usernames/cirt-default-usernames.txt'

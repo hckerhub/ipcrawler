@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2025-06-12 🌐
+
+### 🚀 VHost Discovery Release
+**ipcrawler** v1.1.0 introduces comprehensive virtual host discovery capabilities with interactive `/etc/hosts` management, making it even easier to handle complex web applications during penetration testing.
+
+### ✨ Added
+- **🌐 VHost Discovery System**
+  - **VHost Redirect Hunter Plugin**: Automatic discovery of hostnames via HTTP redirect analysis
+  - **Interactive Post-Processing**: Smart `/etc/hosts` management with Y/N/S options for user control
+  - **Safety Features**: Automatic backup of `/etc/hosts` before modifications with timestamped files
+  - **Configuration-Driven**: Full control via `[vhost_discovery]` section in config.toml
+  - **Intelligent Detection**: Duplicate prevention and existing entry detection
+  - **Manual Fallback**: Copy-paste commands generated when sudo privileges unavailable
+  - **Beautiful Output**: Emoji-rich progress indicators and summary tables
+  - **Integration**: Seamless integration with existing HTML reporting system
+
+### 🔧 Enhanced
+- **Post-Scan Processing**: Automatic VHost management runs after all scans complete
+- **Configuration System**: New VHost-specific settings (timeout, user-agent, auto-add behavior)
+- **Error Handling**: Graceful fallbacks and comprehensive error management
+- **Reporting Integration**: VHost discoveries automatically included in Rich HTML reports
+
+---
+
 ## [1.0.0] - 2025-06-10 🎉
 
 ### 🚀 Initial Release
@@ -50,6 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Combined multi-target reporting capabilities
   - Automatic discovery and presentation of URLs, domains, vulnerabilities
   - Technology stack detection and credential extraction
+
+- **🕷️ VHost Redirect Hunter (NEW)**
+  - Automatic discovery of hostnames via HTTP redirect analysis
+  - Post-scan interactive prompt to add discovered VHosts to `/etc/hosts`
+  - Smart privilege elevation - prompts for `sudo` only when needed
+  - Beautiful emoji-rich output with summary tables
+  - Automatic backup of `/etc/hosts` before modifications
+  - Duplicate detection and manual command generation
+  - Configurable timeouts and user agents
   - File-based results organization with intelligent filtering
   - Print-friendly layouts and mobile-responsive design
 
@@ -87,8 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🚀 Future Goal
 
-### 🎯 [1.1.0] - YOLO Mode & Enhanced Automation
-**Target Date**: Q3 2025
+### 🎯 [1.2.0] - YOLO Mode & Enhanced Automation
+**Target Date**: Q1 2025
 
 #### 🚀 Full YOLO Mode
 - **Auto-Execute Recommended Commands**: Automatically run all commands from `_manual_commands.txt`
