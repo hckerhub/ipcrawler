@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1] - 2025-01-20 🐛
+
+### 🐛 CRITICAL BUG FIXES
+**Fixed major plugin check issues that were preventing plugins from running with default tags**
+
+### 🔧 Fixed
+- **Plugin Check Logic**: Fixed missing `return True` statements in multiple plugin `check()` methods
+  - Fixed: `dnsrecon`, `redis-cli`, `dnsrecon-subdomain-bruteforce`, `enum4linux`, `oracle-scanner`, `oracle-tnscmd`
+  - **Impact**: Plugins with available tools were incorrectly failing checks and not running
+  - **Result**: Plugins now properly pass checks when their required tools are installed
+- **Progress Bar Exception**: Fixed `IndexError` in ProgressManager when tasks were removed during updates
+  - Added proper error handling and task existence checks in `_progress_updater()`
+  - **Impact**: Eliminated random crashes during progress bar updates
+  - **Result**: Smooth progress bar operation without exceptions
+- **Directory Buster Auto-Detection**: Enhanced dirbuster plugin to automatically detect available tools
+  - Auto-switches from `feroxbuster` → `ffuf` → `dirsearch` → `gobuster` → `dirb`
+  - **Impact**: Directory busting now works with `--tags default` when any compatible tool is available
+  - **Result**: Improved plugin compatibility across different systems
+
+### 📈 Improvements
+- **Plugin Resilience**: All plugins now handle tool availability checks correctly
+- **Better Error Messages**: Enhanced plugin error reporting with installation suggestions
+- **System Compatibility**: Improved cross-platform tool detection and usage
+
+---
+
 ## [2.0.0] - 2025-01-20 🎨
 
 ### 🎨 MAJOR UI OVERHAUL - Feroxbuster-Inspired Interface

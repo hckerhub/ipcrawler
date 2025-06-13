@@ -28,7 +28,7 @@ from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, 
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
-VERSION = "1.1.4"
+VERSION = "2.0.1"
 
 def show_rich_help():
 	"""Display beautiful help output using Rich library"""

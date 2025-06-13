@@ -23,6 +23,7 @@ class Enum4Linux(ServiceScan):
 		elif tool == 'enum4linux-ng' and which('enum4linux-ng') is None:
 			self.error('The enum4linux-ng program could not be found. Make sure it is installed. (https://github.com/cddmp/enum4linux-ng)')
 			return False
+		return True
 
 	async def run(self, service):
 		if service.target.ipversion == 'IPv4':

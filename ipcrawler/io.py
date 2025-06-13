@@ -35,7 +35,7 @@ def get_ipcrawler_ascii():
     ⚡ Network Spider - Weaving Through Your Infrastructure ⚡
     """
 
-def show_startup_banner(targets=None, version="1.1.4"):
+def show_startup_banner(targets=None, version="2.0.1"):
 	"""Display feroxbuster-style startup banner"""
 	from ipcrawler.config import config
 	if not RICH_AVAILABLE or config['accessible']:
@@ -89,7 +89,7 @@ def get_config_display_table(targets=None):
 		("⏱️  Timeout", f"{config.get('timeout')}m" if config.get('timeout') else "None"),
 		("🔧 Status Codes", "All Status Codes"),
 		("🔍 Timeout (secs)", "7"),
-		("👤 User-Agent", f"ipcrawler/{version if 'version' in locals() else '1.1.4'}"),
+		("👤 User-Agent", f"ipcrawler/{version if 'version' in locals() else '2.0.1'}"),
 		("💾 Config File", config.get('global_file', '/etc/ipcrawler/config.toml') or '/etc/ipcrawler/config.toml'),
 		("🔗 Extract Links", "true"),
 		("🌐 HTTP methods", "[GET]"),
@@ -626,13 +626,28 @@ class ProgressManager:
 			
 		start_time = time.time()
 		while time.time() - start_time < duration and self.active:
-			elapsed = time.time() - start_time
-			progress_percent = min(90, (elapsed / duration) * 90)  # Max 90% until completion
-			current_progress = self.progress.tasks[task_id].completed
-			advance_amount = max(0, progress_percent - current_progress)
-			
-			if advance_amount > 0:
-				self.progress.update(task_id, advance=advance_amount)
+			try:
+				# Check if task still exists before accessing it
+				if task_id not in self.tasks:
+					break
+					
+				elapsed = time.time() - start_time
+				progress_percent = min(90, (elapsed / duration) * 90)  # Max 90% until completion
+				
+				# Safely get current progress
+				try:
+					current_progress = self.progress.tasks[task_id].completed
+				except (KeyError, IndexError):
+					# Task was removed, exit gracefully
+					break
+					
+				advance_amount = max(0, progress_percent - current_progress)
+				
+				if advance_amount > 0:
+					self.progress.update(task_id, advance=advance_amount)
+			except Exception:
+				# If any error occurs, exit gracefully
+				break
 			
 			await asyncio.sleep(0.5)  # Update every half second
 	

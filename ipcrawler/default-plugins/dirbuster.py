@@ -23,21 +23,42 @@ class DirBuster(ServiceScan):
 		self.match_service_name('^nacn_http$', negative_match=True)
 
 	def check(self):
-		tool = self.get_option('tool')
-		if tool == 'feroxbuster' and which('feroxbuster') is None:
-			self.error('The feroxbuster program could not be found. Make sure it is installed. (On Kali, run: sudo apt install feroxbuster)')
-			return False
-		elif tool == 'gobuster' and which('gobuster') is None:
-			self.error('The gobuster program could not be found. Make sure it is installed. (On Kali, run: sudo apt install gobuster)')
-			return False
-		elif tool == 'dirsearch' and which('dirsearch') is None:
-			self.error('The dirsearch program could not be found. Make sure it is installed. (On Kali, run: sudo apt install dirsearch)')
-			return False
-		elif tool == 'ffuf' and which('ffuf') is None:
-			self.error('The ffuf program could not be found. Make sure it is installed. (On Kali, run: sudo apt install ffuf)')
-			return False
-		elif tool == 'dirb' and which('dirb') is None:
-			self.error('The dirb program could not be found. Make sure it is installed. (On Kali, run: sudo apt install dirb)')
+		# List of tools in order of preference
+		tools_to_try = ['feroxbuster', 'gobuster', 'ffuf', 'dirsearch', 'dirb']
+		
+		# Get configured tool, defaulting to feroxbuster if not available
+		try:
+			configured_tool = self.get_option('tool')
+		except Exception as e:
+			configured_tool = 'feroxbuster'  # Default fallback
+		
+		# First, check if the configured tool is available
+		if which(configured_tool) is not None:
+			return True
+		
+		# If configured tool isn't available, try to find any available tool
+		available_tool = None
+		for tool in tools_to_try:
+			if which(tool) is not None:
+				available_tool = tool
+				break
+		
+		if available_tool:
+			# Auto-switch to the first available tool
+			try:
+				# Set the option directly in the args namespace
+				option_name = self.slug.replace('-', '_') + '.tool'
+				setattr(self.ipcrawler.args, option_name, available_tool)
+				self.info(f'Switched from {configured_tool} to {available_tool} (auto-detected)')
+			except:
+				# If setting fails, just continue - the plugin will use the default
+				pass
+			return True
+		else:
+			# No directory busting tools found
+			self.error('No directory busting tools found. Please install one of: ' + ', '.join(tools_to_try))
+			self.error('On Kali: sudo apt install feroxbuster gobuster dirsearch dirb')
+			self.error('On macOS: brew install feroxbuster gobuster ffuf')
 			return False
 
 	async def run(self, service):
