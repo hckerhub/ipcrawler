@@ -15,6 +15,7 @@ class VHostRedirectHunter(ServiceScan):
         self.name = 'VHost Redirect Hunter'
         self.slug = 'vhost-redirect-hunter' 
         self.tags = ['default', 'http', 'safe', 'quick']
+        self.priority = 10  # Higher priority than other vhost plugins
 
     def configure(self):
         self.match_service_name('^http')

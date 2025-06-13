@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2025-06-12 🔧
+
+### 🐛 Fixed
+- **VHost Discovery Priority**: VHost Redirect Hunter now runs before Virtual Host Enumeration (priority 10 vs 5)
+- **Post-Processing Path Resolution**: Fixed post-processor to correctly scan all target directories instead of single 'scans' directory
+- **File Detection Logic**: Enhanced VHost file discovery to properly locate `vhost_redirects_*.txt` files in target subdirectories
+- **Plugin Execution Order**: Ensured VHost Redirect Hunter takes priority over other VHost enumeration methods
+
+### 🔧 Enhanced
+- **Error Handling**: Improved error messages and debugging information for VHost discovery issues
+- **Directory Scanning**: More robust directory traversal for multi-target scenarios
+
+---
+
 ## [1.1.0] - 2025-06-12 🌐
 
 ### 🚀 VHost Discovery Release

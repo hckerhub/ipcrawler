@@ -19,36 +19,41 @@ except ImportError:
 
 class VHostPostProcessor:
     
-    def __init__(self, scans_dir):
-        self.scans_dir = scans_dir
+    def __init__(self, scan_directories):
+        # Handle both single directory (string) and multiple directories (list)
+        if isinstance(scan_directories, str):
+            self.scan_directories = [scan_directories]
+        else:
+            self.scan_directories = scan_directories
         self.discovered_vhosts = []
         self.existing_hosts = set()
         
     def discover_vhosts_from_files(self):
         """Parse VHost discovery files and extract hostnames"""
-        for root, dirs, files in os.walk(self.scans_dir):
-            for file in files:
-                if file.startswith('vhost_redirects_') and file.endswith('.txt'):
-                    file_path = os.path.join(root, file)
-                    try:
-                        with open(file_path, 'r') as f:
-                            content = f.read()
+        for scan_dir in self.scan_directories:
+            for root, dirs, files in os.walk(scan_dir):
+                for file in files:
+                    if file.startswith('vhost_redirects_') and file.endswith('.txt'):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r') as f:
+                                content = f.read()
+                                
+                            # Extract IP from scan directory name or file content
+                            ip = os.path.basename(root)
                             
-                        # Extract IP from scan directory name
-                        ip = os.path.basename(root)
-                        
-                        # Extract hostname from file content
-                        for line in content.split('\n'):
-                            if line.startswith('Extracted Hostname:'):
-                                hostname = line.split(':', 1)[1].strip()
-                                if hostname and hostname != ip:
-                                    self.discovered_vhosts.append({
-                                        'hostname': hostname,
-                                        'ip': ip,
-                                        'file': file_path
-                                    })
-                    except Exception as e:
-                        print(f"❌ Error parsing {file_path}: {e}")
+                            # Extract hostname from file content
+                            for line in content.split('\n'):
+                                if line.startswith('Extracted Hostname:'):
+                                    hostname = line.split(':', 1)[1].strip()
+                                    if hostname and hostname != ip:
+                                        self.discovered_vhosts.append({
+                                            'hostname': hostname,
+                                            'ip': ip,
+                                            'file': file_path
+                                        })
+                        except Exception as e:
+                            print(f"❌ Error parsing {file_path}: {e}")
                         
     def read_existing_hosts(self):
         """Read existing /etc/hosts entries"""

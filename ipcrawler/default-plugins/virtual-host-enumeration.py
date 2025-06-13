@@ -11,6 +11,7 @@ class VirtualHost(ServiceScan):
 		self.name = 'Virtual Host Enumeration'
 		self.slug = 'vhost-enum'
 		self.tags = ['default', 'safe', 'http', 'long']
+		self.priority = 5  # Lower priority than VHost Redirect Hunter
 
 	def configure(self):
 		self.add_option('hostname', help='The hostname to use as the base host (e.g. example.com) for virtual host enumeration. Default: %(default)s')

@@ -28,7 +28,7 @@ from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, 
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 def show_rich_help():
 	"""Display beautiful help output using Rich library"""
@@ -112,14 +112,15 @@ def show_rich_help():
 	console.print(verb_table)
 	
 	# Other Options
-	console.print("\n[bold red]🔧 Other Options:[/bold red]")
+	console.print("\n[bold green]🔧 Other Options:[/bold green]")
 	other_table = Table(show_header=False, box=None, padding=(0, 1))
 	other_table.add_column("Option", style="cyan", width=25)
 	other_table.add_column("Description")
 	
-	other_table.add_row("[dim][[/dim][bold cyan]-l[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--list[/bold cyan][dim]][/dim]", "List available plugins")
+	other_table.add_row("[dim][[/dim][bold cyan]-l[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--list[/bold cyan][dim]][/dim]", "List available plugins [dim](--list, --list port, --list service)[/dim]")
 	other_table.add_row("[dim][[/dim][bold cyan]--version[/bold cyan][dim]][/dim]", "Show version and exit")
 	other_table.add_row("[dim][[/dim][bold cyan]-h[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--help[/bold cyan][dim]][/dim]", "Show this help message")
+	other_table.add_row("[dim][[/dim][bold cyan]--help-all[/bold cyan][dim]][/dim]", "Show complete help with all options")
 	
 	console.print(other_table)
 	
@@ -129,8 +130,187 @@ def show_rich_help():
 		"• Start with [cyan]ipcrawler -v target[/cyan] to see progress\n" +
 		"• Check [cyan]results/target/scans/_manual_commands.txt[/cyan] for additional tests\n" +
 		"• Use [cyan]--timeout 60[/cyan] for time-limited scans (OSCP exam)\n" +
-		"• Run [cyan]ipcrawler --list[/cyan] to see all available plugins",
+		"• Run [cyan]ipcrawler --list[/cyan] to see all available plugins\n" +
+		"• Use [cyan]--help-all[/cyan] for complete reference with all options",
 		border_style="green"
+	))
+
+def show_complete_help():
+	"""Display complete help with all available options"""
+	console = Console()
+	
+	# Header
+	console.print(Panel.fit(
+		"[bold blue]🕷️  ipcrawler[/bold blue] - Complete Reference\n[dim]v" + VERSION + " - All Available Options[/dim]",
+		border_style="blue"
+	))
+	
+	# Note about complete help
+	console.print("\n[bold yellow]📖 This is the complete reference showing ALL available options.[/bold yellow]")
+	console.print("[dim]For everyday usage, use [cyan]ipcrawler --help[/cyan] which shows the most commonly needed options.[/dim]\n")
+	
+	# Show all the same sections as regular help but with complete content
+	# Usage
+	console.print("[bold green]Basic Usage:[/bold green]")
+	usage_table = Table(show_header=False, box=None, padding=(0, 2))
+	usage_table.add_column("Command", style="cyan")
+	usage_table.add_column("Description")
+	
+	usage_table.add_row("ipcrawler 10.10.10.1", "Basic scan of single target")
+	usage_table.add_row("ipcrawler -v 10.10.10.1", "Verbose scan (shows progress)")
+	usage_table.add_row("ipcrawler -p 80,443 target.com", "Scan specific ports only")
+	usage_table.add_row("ipcrawler --timeout 30 10.10.10.0/24", "30min scan of subnet")
+	
+	console.print(usage_table)
+	
+	# All the sections from the regular help
+	# Essential Options
+	console.print("\n[bold yellow]🎯 Essential Options:[/bold yellow]")
+	essential_table = Table(show_header=False, box=None, padding=(0, 1))
+	essential_table.add_column("Option", style="cyan", width=25)
+	essential_table.add_column("Description", width=55)
+	
+	essential_table.add_row("[dim][[/dim][bold cyan]-v[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--verbose[/bold cyan][dim]][/dim]", "Show scan progress [dim](use -v, -vv, -vvv)[/dim]")
+	essential_table.add_row("[dim][[/dim][bold cyan]-p[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--ports[/bold cyan][dim]][/dim]", "Port specification [dim](default: top 1000)[/dim]\n[yellow]Examples:[/yellow] 80,443 or 1-1000 or T:80,U:53")
+	essential_table.add_row("[dim][[/dim][bold cyan]-t[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--target-file[/bold cyan][dim]][/dim]", "Read targets from file")
+	essential_table.add_row("[dim][[/dim][bold cyan]-o[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--output[/bold cyan][dim]][/dim]", "Output directory [dim](default: ./results)[/dim]")
+	essential_table.add_row("[dim][[/dim][bold cyan]--timeout[/bold cyan][dim]][/dim]", "Max scan time in minutes")
+	essential_table.add_row("[dim][[/dim][bold cyan]--exclude-tags[/bold cyan][dim]][/dim]", "Skip plugin types [dim](e.g. bruteforce)[/dim]")
+	
+	console.print(essential_table)
+	
+	# Advanced Options
+	console.print("\n[bold magenta]⚙️  Advanced Options:[/bold magenta]")
+	advanced_table = Table(show_header=False, box=None, padding=(0, 1))
+	advanced_table.add_column("Option", style="cyan", width=25)
+	advanced_table.add_column("Description", width=55)
+	
+	advanced_table.add_row("[dim][[/dim][bold cyan]-m[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--max-scans[/bold cyan][dim]][/dim]", "Concurrent scan limit [dim](default: 50)[/dim]")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--force-services[/bold cyan][dim]][/dim]", "Force service detection\n[yellow]Example:[/yellow] tcp/80/http tcp/443/https")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--single-target[/bold cyan][dim]][/dim]", "Don't create target subdirectory")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--proxychains[/bold cyan][dim]][/dim]", "Use with proxychains")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--nmap[/bold cyan][dim]][/dim]", "Override nmap options")
+	advanced_table.add_row("[dim][[/dim][bold cyan]--heartbeat[/bold cyan][dim]][/dim]", "Status update interval in seconds")
+	
+	console.print(advanced_table)
+	
+	# Expert Options
+	console.print("\n[bold magenta]🎛️  Expert Options:[/bold magenta]")
+	expert_table = Table(show_header=False, box=None, padding=(0, 1))
+	expert_table.add_column("Option", style="cyan", width=25)
+	expert_table.add_column("Description", width=55)
+	
+	expert_table.add_row("[dim][[/dim][bold cyan]--tags[/bold cyan][dim]][/dim]", "Plugin tag selection [dim](default: default)[/dim]\n[yellow]Example:[/yellow] safe+quick,bruteforce")
+	expert_table.add_row("[dim][[/dim][bold cyan]--port-scans[/bold cyan][dim]][/dim]", "Override port scan plugins [dim](comma separated)[/dim]")
+	expert_table.add_row("[dim][[/dim][bold cyan]--service-scans[/bold cyan][dim]][/dim]", "Override service scan plugins [dim](comma separated)[/dim]")
+	expert_table.add_row("[dim][[/dim][bold cyan]--reports[/bold cyan][dim]][/dim]", "Override report plugins [dim](comma separated)[/dim]")
+	expert_table.add_row("[dim][[/dim][bold cyan]--target-timeout[/bold cyan][dim]][/dim]", "Per-target timeout in minutes")
+	expert_table.add_row("[dim][[/dim][bold cyan]--max-port-scans[/bold cyan][dim]][/dim]", "Concurrent port scan limit [dim](default: 10)[/dim]")
+	
+	console.print(expert_table)
+	
+	# System Options
+	console.print("\n[bold yellow]⚙️  System Options:[/bold yellow]")
+	system_table = Table(show_header=False, box=None, padding=(0, 1))
+	system_table.add_column("Option", style="cyan", width=25)
+	system_table.add_column("Description", width=55)
+	
+	system_table.add_row("[dim][[/dim][bold cyan]--only-scans-dir[/bold cyan][dim]][/dim]", "Only create scans directory [dim](no exploit/loot/report)[/dim]")
+	system_table.add_row("[dim][[/dim][bold cyan]--no-port-dirs[/bold cyan][dim]][/dim]", "Don't create port directories [dim](tcp80, udp53)[/dim]")
+	system_table.add_row("[dim][[/dim][bold cyan]--nmap-append[/bold cyan][dim]][/dim]", "Append to default nmap options")
+	system_table.add_row("[dim][[/dim][bold cyan]--disable-sanity-checks[/bold cyan][dim]][/dim]", "Skip sanity checks")
+	system_table.add_row("[dim][[/dim][bold cyan]--disable-keyboard-control[/bold cyan][dim]][/dim]", "Disable keyboard controls [dim](SSH/Docker)[/dim]")
+	system_table.add_row("[dim][[/dim][bold cyan]--accessible[/bold cyan][dim]][/dim]", "Screenreader accessibility mode")
+	
+	console.print(system_table)
+	
+	# Configuration Options
+	console.print("\n[bold blue]📁 Configuration Options:[/bold blue]")
+	config_table = Table(show_header=False, box=None, padding=(0, 1))
+	config_table.add_column("Option", style="cyan", width=25)
+	config_table.add_column("Description", width=55)
+	
+	config_table.add_row("[dim][[/dim][bold cyan]-c[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--config[/bold cyan][dim]][/dim]", "Config file location [dim](config.toml)[/dim]")
+	config_table.add_row("[dim][[/dim][bold cyan]-g[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--global-file[/bold cyan][dim]][/dim]", "Global file location [dim](global.toml)[/dim]")
+	config_table.add_row("[dim][[/dim][bold cyan]--plugins-dir[/bold cyan][dim]][/dim]", "Custom plugins directory")
+	config_table.add_row("[dim][[/dim][bold cyan]--add-plugins-dir[/bold cyan][dim]][/dim]", "Additional plugins directory")
+	config_table.add_row("[dim][[/dim][bold cyan]--ignore-plugin-checks[/bold cyan][dim]][/dim]", "Ignore plugin errors")
+	
+	console.print(config_table)
+	
+	# Plugin Control Options
+	console.print("\n[bold red]🔌 Plugin Control Options:[/bold red]")
+	plugin_table = Table(show_header=False, box=None, padding=(0, 1))
+	plugin_table.add_column("Option", style="cyan", width=25)
+	plugin_table.add_column("Description", width=55)
+	
+	plugin_table.add_row("[dim][[/dim][bold cyan]-mpti[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--max-plugin-target-instances[/bold cyan][dim]][/dim]", "Plugin instance limits per target\n[yellow]Example:[/yellow] nmap-http:2 dirbuster:1")
+	plugin_table.add_row("[dim][[/dim][bold cyan]-mpgi[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--max-plugin-global-instances[/bold cyan][dim]][/dim]", "Global plugin instance limits\n[yellow]Example:[/yellow] nmap-http:2 dirbuster:1")
+	
+	console.print(plugin_table)
+	
+	# Port Syntax Examples
+	console.print("\n[bold cyan]🔌 Port Syntax Examples:[/bold cyan]")
+	port_examples = Table(show_header=False, box=None, padding=(0, 1))
+	port_examples.add_column("Syntax", style="yellow", width=20)
+	port_examples.add_column("Description", width=40)
+	
+	port_examples.add_row("80,443,8080", "Specific ports (TCP)")
+	port_examples.add_row("1-1000", "Port range")
+	port_examples.add_row("T:22,80", "TCP ports only")
+	port_examples.add_row("U:53,161", "UDP ports only")
+	port_examples.add_row("B:53", "Both TCP and UDP")
+	port_examples.add_row("80,T:22,U:53", "Mixed specification")
+	
+	console.print(port_examples)
+	
+	# Advanced Tag Examples
+	console.print("\n[bold red]🚨 Advanced Tag Examples:[/bold red]")
+	tag_examples = Table(show_header=False, box=None, padding=(0, 1))
+	tag_examples.add_column("Tag Expression", style="yellow", width=30)
+	tag_examples.add_column("Description", width=50)
+	
+	tag_examples.add_row("default", "Run default plugins only")
+	tag_examples.add_row("safe+quick", "Run plugins tagged as both safe AND quick")
+	tag_examples.add_row("safe,bruteforce", "Run plugins tagged as safe OR bruteforce")
+	tag_examples.add_row("http+safe,smb", "Run (HTTP AND safe) OR SMB plugins")
+	
+	console.print(tag_examples)
+	
+	# Verbosity Levels
+	console.print("\n[bold blue]📢 Verbosity Levels:[/bold blue]")
+	verb_table = Table(show_header=False, box=None, padding=(0, 1))
+	verb_table.add_column("Level", style="green", width=12)
+	verb_table.add_column("Description")
+	
+	verb_table.add_row("(none)", "Minimal output - start/end announcements only")
+	verb_table.add_row("-v", "Show discovered services and plugin starts")
+	verb_table.add_row("-vv", "Show commands executed and pattern matches") 
+	verb_table.add_row("-vvv", "Maximum - live output from all commands")
+	
+	console.print(verb_table)
+	
+	# Other Options
+	console.print("\n[bold green]🔧 Other Options:[/bold green]")
+	other_table = Table(show_header=False, box=None, padding=(0, 1))
+	other_table.add_column("Option", style="cyan", width=25)
+	other_table.add_column("Description")
+	
+	other_table.add_row("[dim][[/dim][bold cyan]-l[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--list[/bold cyan][dim]][/dim]", "List available plugins [dim](--list, --list port, --list service)[/dim]")
+	other_table.add_row("[dim][[/dim][bold cyan]--version[/bold cyan][dim]][/dim]", "Show version and exit")
+	other_table.add_row("[dim][[/dim][bold cyan]-h[/bold cyan][dim]][/dim] [dim][[/dim][bold cyan]--help[/bold cyan][dim]][/dim]", "Show essential help message")
+	other_table.add_row("[dim][[/dim][bold cyan]--help-all[/bold cyan][dim]][/dim]", "Show this complete reference")
+	
+	console.print(other_table)
+	
+	# Complete footer
+	console.print(Panel.fit(
+		"[bold yellow]📚 Complete Reference:[/bold yellow]\n" +
+		"• This shows ALL available options for power users\n" +
+		"• Most users only need the basic options shown in [cyan]--help[/cyan]\n" +
+		"• For plugin-specific options, check the global.toml file\n" +
+		"• Advanced users can create custom plugins in the plugins directory",
+		border_style="yellow"
 	))
 
 def show_fallback_help(parser):
@@ -1287,6 +1467,7 @@ async def run():
 
 	# Custom help handling
 	parser.add_argument('-h', '--help', action='store_true', help='Show this help message and exit.')
+	parser.add_argument('--help-all', action='store_true', help='Show complete help with all available options.')
 	parser.error = lambda s: fail(s[0].upper() + s[1:])
 	args = parser.parse_args()
 	
@@ -1295,6 +1476,15 @@ async def run():
 		if RICH_AVAILABLE:
 			show_rich_help()
 		else:
+			show_fallback_help(parser)
+		sys.exit(0)
+	
+	# Handle complete help
+	if hasattr(args, 'help_all') and args.help_all:
+		if RICH_AVAILABLE:
+			show_complete_help()
+		else:
+			print("Complete help requires Rich library. Install with: pip install rich")
 			show_fallback_help(parser)
 		sys.exit(0)
 
@@ -1788,19 +1978,20 @@ async def run():
 			try:
 				from ipcrawler.vhost_post_processor import VHostPostProcessor
 				
-				# Check if any VHost files were created
+				# Check if any VHost files were created and collect all scan directories
 				vhost_files_found = False
+				scan_directories = []
+				
 				for target in ipcrawler.completed_targets:
+					scan_directories.append(target.scandir)
 					for root, dirs, files in os.walk(target.scandir):
 						if any(f.startswith('vhost_redirects_') and f.endswith('.txt') for f in files):
 							vhost_files_found = True
-							break
-					if vhost_files_found:
-						break
 				
 				if vhost_files_found:
 					info('{bright}🌐 Running VHost Discovery Post-Processing...{rst}')
-					processor = VHostPostProcessor('scans')
+					# Pass all scan directories to the processor
+					processor = VHostPostProcessor(scan_directories)
 					processor.run_interactive_session()
 				
 			except ImportError:
