@@ -9,6 +9,9 @@
 # Enable automatic VHost discovery via HTTP redirects
 enabled = true
 
+# Enable interactive prompts for /etc/hosts modification (set to false for non-interactive environments)
+interactive_mode = true
+
 # Automatically prompt to add discovered VHosts to /etc/hosts after scan
 auto_add_hosts = true
 

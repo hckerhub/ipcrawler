@@ -198,6 +198,15 @@ class VHostPostProcessor:
                 print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
             return
             
+        # Check if interactive mode is disabled
+        interactive_mode = vhost_config.get('interactive_mode', True)
+        
+        if not interactive_mode:
+            print("\n📝 Interactive mode disabled in config. Manual commands:")
+            for vhost in new_vhosts:
+                print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
+            return
+        
         # Check if auto-add is enabled
         auto_add = vhost_config.get('auto_add_hosts', True)
         
@@ -213,40 +222,70 @@ class VHostPostProcessor:
         for vhost in new_vhosts:
             print(f"   {vhost['ip']} {vhost['hostname']}")
             
-        while True:
-            choice = input(f"\n[Y]es / [N]o / [S]how details: ").lower().strip()
-            
-            if choice in ['y', 'yes']:
-                # Create backup first
-                backup_path = self.backup_hosts_file()
-                if backup_path:
-                    # Add entries
-                    if self.add_hosts_entries(new_vhosts):
-                        print("\n🎉 VHost entries successfully added!")
-                        print("💡 Use 'sudo nano /etc/hosts' to edit manually if needed")
-                        print(f"🔄 Restore with: sudo cp {backup_path} /etc/hosts")
+        # Try multiple input methods for better compatibility
+        max_attempts = 3
+        attempt = 0
+        
+        while attempt < max_attempts:
+            try:
+                # Flush stdout to ensure prompt is visible
+                import sys
+                sys.stdout.flush()
+                
+                # Try to get input with timeout fallback
+                print(f"\n[Y]es / [N]o / [S]how details: ", end='', flush=True)
+                
+                try:
+                    choice = input().lower().strip()
+                except (EOFError, KeyboardInterrupt):
+                    print("\n\n⚠️  Input interrupted. Defaulting to 'No'")
+                    choice = 'n'
+                except Exception as e:
+                    print(f"\n⚠️  Input error: {e}. Defaulting to 'No'")
+                    choice = 'n'
+                
+                if choice in ['y', 'yes']:
+                    # Create backup first
+                    backup_path = self.backup_hosts_file()
+                    if backup_path:
+                        # Add entries
+                        if self.add_hosts_entries(new_vhosts):
+                            print("\n🎉 VHost entries successfully added!")
+                            print("💡 Use 'sudo nano /etc/hosts' to edit manually if needed")
+                            print(f"🔄 Restore with: sudo cp {backup_path} /etc/hosts")
+                        else:
+                            print("\n❌ Failed to add VHost entries")
                     else:
-                        print("\n❌ Failed to add VHost entries")
+                        print("\n❌ Cannot proceed without backup")
+                    break
+                    
+                elif choice in ['n', 'no']:
+                    print("\n⏭️  Skipping /etc/hosts modification")
+                    print("📝 Manual commands available in _manual_commands.txt files")
+                    break
+                    
+                elif choice in ['s', 'show', 'details']:
+                    print("\n📋 VHost Details:")
+                    for vhost in new_vhosts:
+                        print(f"\n🔗 {vhost['hostname']}")
+                        print(f"   IP: {vhost['ip']}")
+                        print(f"   Source: {vhost['file']}")
+                    attempt = 0  # Reset attempts for details view
+                    continue
+                    
                 else:
-                    print("\n❌ Cannot proceed without backup")
+                    print("❌ Please enter Y, N, or S")
+                    attempt += 1
+                    if attempt >= max_attempts:
+                        print(f"\n⚠️  Too many invalid attempts. Defaulting to 'No'")
+                        print("📝 Manual commands available in _manual_commands.txt files")
+                        break
+                    continue
+                    
+            except Exception as e:
+                print(f"\n❌ Unexpected error during input: {e}")
+                print("📝 Defaulting to manual mode. Commands available in _manual_commands.txt files")
                 break
-                
-            elif choice in ['n', 'no']:
-                print("\n⏭️  Skipping /etc/hosts modification")
-                print("📝 Manual commands available in _manual_commands.txt files")
-                break
-                
-            elif choice in ['s', 'show', 'details']:
-                print("\n📋 VHost Details:")
-                for vhost in new_vhosts:
-                    print(f"\n🔗 {vhost['hostname']}")
-                    print(f"   IP: {vhost['ip']}")
-                    print(f"   Source: {vhost['file']}")
-                continue
-                
-            else:
-                print("❌ Please enter Y, N, or S")
-                continue
 
 def main():
     """Main entry point"""
