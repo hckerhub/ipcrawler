@@ -191,6 +191,7 @@ def debug(*args, color=Fore.GREEN, sep=' ', end='\n', file=sys.stdout, **kvargs)
 def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 	# Import config fresh each time to avoid import-time initialization issues
 	from ipcrawler.config import config
+	import re  # Import re at function level to avoid UnboundLocalError
 	if RICH_AVAILABLE and not config['accessible']:
 		message = sep.join(str(arg) for arg in args)
 		
@@ -205,7 +206,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 				color = "green"
 			
 			# Parse the message for plugin name and target
-			import re
 			plugin_match = re.search(r'(Port scan|Service scan) ([^{]+?) \(([^)]+)\)', message)
 			target_match = re.search(r'against ([^{]+?)$', message.replace('{rst}', '').replace('{byellow}', '').replace('{rst}', ''))
 			
@@ -232,7 +232,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 		
 		# Enhanced discovery messages  
 		elif 'Discovered open port' in message or 'Identified service' in message:
-			import re
 			if 'Discovered open port' in message:
 				port_match = re.search(r'Discovered open port ([^{]+?) on ([^{]+?)$', message.replace('{rst}', '').replace('{bmagenta}', '').replace('{byellow}', ''))
 				if port_match:
@@ -277,7 +276,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 		
 		# Enhanced completion messages  
 		elif 'finished in' in message and ('Port scan' in message or 'Service scan' in message):
-			import re
 			plugin_match = re.search(r'(Port scan|Service scan) ([^{]+?) \(([^)]+)\)', message)
 			target_match = re.search(r'against ([^{]+?) finished in (.+)$', message.replace('{rst}', '').replace('{byellow}', ''))
 			
@@ -307,7 +305,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 		
 		# Enhanced general scanning messages
 		elif 'Scanning target' in message:
-			import re
 			# Clean up color codes first
 			clean_message = message.replace('{byellow}', '').replace('{rst}', '')
 			target_match = re.search(r'Scanning target ([^\s]+)', clean_message)
@@ -328,7 +325,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 		
 		# Enhanced finished scanning messages
 		elif 'Finished scanning target' in message:
-			import re
 			# Clean up all color codes
 			clean_message = message.replace('{bright}', '').replace('{rst}', '').replace('{byellow}', '')
 			target_match = re.search(r'Finished scanning target ([^\s]+) in (.+)$', clean_message)
@@ -367,7 +363,6 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 		
 		# Enhanced VHost messages
 		elif 'VHost discovered:' in message or 'vhost' in message.lower():
-			import re
 			clean_message = message.replace('{rst}', '').replace('{bmagenta}', '').replace('{bright}', '').replace('{yellow}', '').replace('{crst}', '').replace('{bgreen}', '').replace('{byellow}', '')
 			
 			# Extract VHost information

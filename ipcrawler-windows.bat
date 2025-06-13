@@ -4,6 +4,13 @@ setlocal enabledelayedexpansion
 echo ========================================
 echo       ipcrawler Windows Launcher
 echo ========================================
+echo 🪟 Cross-Platform Docker Setup for Windows
+echo.
+echo This script provides:
+echo   • Docker Desktop and WSL2 support
+echo   • Comprehensive security toolkit
+echo   • Cross-platform container compatibility
+echo   • Windows-optimized file path handling
 echo.
 
 REM Check if Docker is installed and running
@@ -11,10 +18,17 @@ docker --version >nul 2>&1
 if errorlevel 1 (
     echo ❌ Docker is not installed or not in PATH
     echo.
-    echo Please install Docker Desktop for Windows:
-    echo https://docs.docker.com/desktop/install/windows/
+    echo Please install Docker for Windows:
     echo.
-    echo Then restart this script
+    echo 🎯 Recommended: Docker Desktop for Windows
+    echo   • Download: https://docs.docker.com/desktop/install/windows/
+    echo   • Requires Windows 10/11 with WSL2
+    echo.
+    echo 🔧 Alternative: Docker in WSL2 only
+    echo   • Install WSL2: wsl --install
+    echo   • Install Docker inside WSL2 distribution
+    echo.
+    echo 📋 After installation, restart this script
     echo.
     pause
     exit /b 1
@@ -23,9 +37,18 @@ if errorlevel 1 (
 REM Check if Docker daemon is running
 docker ps >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Docker Desktop is not running
+    echo ❌ Docker is installed but not running
     echo.
-    echo Please start Docker Desktop and try again
+    echo Please start Docker and try again:
+    echo.
+    echo 🖥️  Docker Desktop users:
+    echo   • Start Docker Desktop from Start Menu
+    echo   • Wait for Docker to be "Running" in system tray
+    echo.
+    echo 🐧 WSL2 Docker Engine users:
+    echo   • Open WSL2 terminal
+    echo   • Run: sudo service docker start
+    echo   • Or: sudo dockerd (if installed manually)
     echo.
     pause
     exit /b 1
@@ -60,9 +83,18 @@ if "%IMAGE_ID%"=="" (
 REM Create results directory if it doesn't exist
 if not exist "results" mkdir results
 
+echo 🔧 Verifying all security tools are working...
+echo.
+
+REM Test key tools in a temporary container
+docker run --rm ipcrawler bash -c "echo 'Testing critical tools...' && if command -v sslscan >/dev/null 2>&1; then echo 'checkmark sslscan: Available'; else echo 'cross sslscan: Missing'; fi && if command -v whatweb >/dev/null 2>&1; then if whatweb --help >/dev/null 2>&1; then echo 'checkmark whatweb: Working'; else echo 'cross whatweb: Available but broken'; fi; else echo 'cross whatweb: Missing'; fi && if command -v nikto >/dev/null 2>&1; then echo 'checkmark nikto: Available'; else echo 'cross nikto: Missing'; fi && if command -v feroxbuster >/dev/null 2>&1; then echo 'checkmark feroxbuster: Available'; else echo 'cross feroxbuster: Missing'; fi && echo '' && echo 'Tool verification complete!'"
+
+echo.
 echo 🚀 Starting ipcrawler Docker terminal...
+echo 🖥️  Platform: Windows
 echo.
 echo 📋 Available commands once inside:
+echo   • /show-tools.sh            (List all available tools)
 echo   • ipcrawler --help          (Show help)
 echo   • ipcrawler 127.0.0.1       (Test scan)
 echo   • ipcrawler target.com      (Scan target)
@@ -72,15 +104,29 @@ echo.
 echo 💾 Results will be saved to: %cd%\results\
 echo.
 
-REM Run the container interactively with proper volume mounting
+REM Generate unique container name for Windows
+for /f "tokens=1-4 delims=:.," %%a in ("%time%") do (
+    set "timestamp=%%a%%b%%c%%d"
+)
+
+echo 🐳 Launching cross-platform Docker container...
+echo.
+
+REM Run the container with Windows-optimized settings
 docker run -it --rm ^
     -v "%cd%\results:/scans" ^
     -w /opt/ipcrawler ^
-    --name ipcrawler-session ^
+    --name "ipcrawler-session-%timestamp%" ^
+    --platform linux/amd64 ^
     ipcrawler bash
 
 echo.
 echo 👋 ipcrawler session ended
 echo 📁 Check your results in: %cd%\results\
+echo.
+echo 💡 Windows result viewing options:
+echo   • explorer %cd%\results
+echo   • Open in File Explorer from current directory
+echo   • Or navigate to: %cd%\results
 echo.
 pause 
