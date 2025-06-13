@@ -51,6 +51,43 @@ update_git() {
     fi
 }
 
+clean_cached_files() {
+    echo "🧹 Cleaning cached application files..."
+    
+    # Remove Application Support cache that might override source code
+    if [ "$(uname)" = "Darwin" ]; then
+        APP_SUPPORT_DIR="$HOME/Library/Application Support/ipcrawler"
+    else
+        APP_SUPPORT_DIR="$HOME/.local/share/ipcrawler"
+    fi
+    
+    if [ -d "$APP_SUPPORT_DIR" ]; then
+        echo "📂 Removing cached files from: $APP_SUPPORT_DIR"
+        
+        # Backup current config if it exists and differs from source
+        if [ -f "$APP_SUPPORT_DIR/config.toml" ] && [ -f "config.toml" ]; then
+            if ! diff -q "$APP_SUPPORT_DIR/config.toml" "config.toml" >/dev/null 2>&1; then
+                echo "💾 Backing up user config to config.toml.backup"
+                cp "$APP_SUPPORT_DIR/config.toml" "config.toml.backup"
+            fi
+        fi
+        
+        # Remove cached plugins but preserve wordlists and user configs
+        rm -rf "$APP_SUPPORT_DIR/plugins" 2>/dev/null || true
+        
+        # Recreate plugin symlink to source
+        if [ -d "ipcrawler/default-plugins" ]; then
+            echo "🔗 Creating symlink from cached plugins to source"
+            mkdir -p "$APP_SUPPORT_DIR"
+            ln -sf "$(pwd)/ipcrawler/default-plugins" "$APP_SUPPORT_DIR/plugins"
+        fi
+        
+        echo "✅ Cache cleanup complete"
+    else
+        echo "ℹ️  No application cache found"
+    fi
+}
+
 update_python() {
     echo "🐍 Updating Python environment..."
     
@@ -64,6 +101,28 @@ update_python() {
     echo "📦 Updating Python packages..."
     venv/bin/python3 -m pip install --upgrade pip
     venv/bin/python3 -m pip install --upgrade -r requirements.txt
+    
+    # Regenerate the command script with latest code
+    echo "🔧 Updating ipcrawler command..."
+    rm -f ipcrawler-cmd
+    
+    # Create updated command script
+    cat > ipcrawler-cmd << 'EOF'
+#!/bin/bash
+# Resolve the real path of the script (follow symlinks)
+SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+cd "$DIR"
+source "$DIR/venv/bin/activate" && PYTHONPATH="$DIR" python3 "$DIR/ipcrawler/main.py" "$@"
+EOF
+    
+    chmod +x ipcrawler-cmd
+    
+    # Update system symlink
+    if [ -L "/usr/local/bin/ipcrawler" ]; then
+        echo "🔗 Updating system symlink..."
+        sudo ln -sf "$(pwd)/ipcrawler-cmd" /usr/local/bin/ipcrawler
+    fi
     
     echo "✅ Python environment updated"
 }
@@ -159,13 +218,16 @@ show_summary() {
     echo ""
     echo "📋 What was updated:"
     echo "  • Git repository and source code"
-    echo "  • Python virtual environment and packages"
+    echo "  • Cleaned cached application files"
+    echo "  • Python virtual environment and packages" 
+    echo "  • ipcrawler command script"
     echo "  • System security tools"
     if command -v docker >/dev/null 2>&1; then
         echo "  • Docker image (if needed)"
     fi
     echo ""
     echo "🎯 Ready to use updated ipcrawler!"
+    echo "💡 All changes from 'git pull' are now active!"
 }
 
 # Main execution
@@ -179,6 +241,10 @@ main() {
         exit 1
     fi
     
+    echo ""
+    
+    # Clean cached files that might override source code updates
+    clean_cached_files
     echo ""
     
     # Check if Makefile was updated

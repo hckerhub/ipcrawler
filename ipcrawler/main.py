@@ -28,7 +28,7 @@ from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, 
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 
 def show_rich_help():
 	"""Display beautiful help output using Rich library"""
@@ -342,35 +342,136 @@ def show_fallback_help(parser):
 	# Show standard argparse help as well
 	parser.print_help()
 
-if not os.path.exists(config['config_dir']):
-	shutil.rmtree(config['config_dir'], ignore_errors=True, onerror=None)
-	os.makedirs(config['config_dir'], exist_ok=True)
-	open(os.path.join(config['config_dir'], 'VERSION-' + VERSION), 'a').close()
-	shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.toml'), os.path.join(config['config_dir'], 'config.toml'))
-	shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'global.toml'), os.path.join(config['config_dir'], 'global.toml'))
-else:
-	if not os.path.exists(os.path.join(config['config_dir'], 'config.toml')):
-		shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.toml'), os.path.join(config['config_dir'], 'config.toml'))
-	if not os.path.exists(os.path.join(config['config_dir'], 'global.toml')):
-		shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'global.toml'), os.path.join(config['config_dir'], 'global.toml'))
-	if not os.path.exists(os.path.join(config['config_dir'], 'VERSION-' + VERSION)):
-		warn('It looks like the config in ' + config['config_dir'] + ' is outdated. Please remove the ' + config['config_dir'] + ' directory and re-run ipcrawler to rebuild it.')
+def merge_config_preserving_user_changes(source_file, user_file):
+	"""
+	Merge source config with user config, preserving user customizations
+	Returns True if user file was updated, False if no changes needed
+	"""
+	try:
+		import toml
+		
+		# Load source config (new defaults)
+		with open(source_file, 'r') as f:
+			source_config = toml.load(f)
+		
+		# Load existing user config if it exists
+		user_config = {}
+		if os.path.exists(user_file):
+			with open(user_file, 'r') as f:
+				user_config = toml.load(f)
+		
+		# Check if merge is needed (compare important settings)
+		needs_update = False
+		
+		# Check for new top-level keys in source
+		for key in source_config:
+			if key not in user_config:
+				needs_update = True
+				break
+		
+		# For development: always use source config if we're in a git repo
+		script_dir = os.path.dirname(os.path.realpath(__file__))
+		if os.path.exists(os.path.join(script_dir, '..', '.git')):
+			# In development - always use source files
+			debug('Development mode detected - using source config files')
+			shutil.copy2(source_file, user_file)
+			return True
+		
+		if not needs_update:
+			return False
+			
+		# Preserve user customizations while adding new defaults
+		merged_config = source_config.copy()
+		
+		# Keep user's custom values for key settings
+		preserved_keys = ['tags', 'max_scans', 'verbose', 'nmap_append', 'timeout']
+		for key in preserved_keys:
+			if key in user_config:
+				merged_config[key] = user_config[key]
+		
+		# Preserve user's plugin-specific configurations
+		for section_name, section_data in user_config.items():
+			if isinstance(section_data, dict) and section_name not in ['vhost_discovery']:
+				# Keep user's plugin configurations
+				if section_name not in merged_config:
+					merged_config[section_name] = {}
+				merged_config[section_name].update(section_data)
+		
+		# Write merged config
+		with open(user_file, 'w') as f:
+			toml.dump(merged_config, f)
+		
+		return True
+		
+	except Exception as e:
+		warn(f'Config merge failed: {e}. Using source config as fallback.')
+		shutil.copy2(source_file, user_file)
+		return True
 
+def setup_config_directories():
+	"""Setup config and data directories with smart caching and updates"""
+	source_dir = os.path.dirname(os.path.realpath(__file__))
+	
+	# Setup config directory
+	if not os.path.exists(config['config_dir']):
+		info('Creating ipcrawler config directory...')
+		os.makedirs(config['config_dir'], exist_ok=True)
+		shutil.copy2(os.path.join(source_dir, 'config.toml'), os.path.join(config['config_dir'], 'config.toml'))
+		shutil.copy2(os.path.join(source_dir, 'global.toml'), os.path.join(config['config_dir'], 'global.toml'))
+		open(os.path.join(config['config_dir'], 'VERSION-' + VERSION), 'a').close()
+	else:
+		# Update config files intelligently
+		config_updated = False
+		
+		# Update config.toml with user preservation
+		source_config = os.path.join(source_dir, 'config.toml')
+		user_config = os.path.join(config['config_dir'], 'config.toml')
+		if merge_config_preserving_user_changes(source_config, user_config):
+			config_updated = True
+		
+		# Update global.toml (usually safe to overwrite)
+		source_global = os.path.join(source_dir, 'global.toml')
+		user_global = os.path.join(config['config_dir'], 'global.toml')
+		if not os.path.exists(user_global) or os.path.getmtime(source_global) > os.path.getmtime(user_global):
+			shutil.copy2(source_global, user_global)
+			config_updated = True
+		
+		# Update version marker
+		version_file = os.path.join(config['config_dir'], 'VERSION-' + VERSION)
+		if not os.path.exists(version_file):
+			# Clean old version files
+			for f in os.listdir(config['config_dir']):
+				if f.startswith('VERSION-'):
+					os.remove(os.path.join(config['config_dir'], f))
+			open(version_file, 'a').close()
+			if config_updated:
+				info('Configuration updated to version ' + VERSION)
+	
+	# Setup data directory (plugins and wordlists)
+	if not os.path.exists(config['data_dir']):
+		info('Creating ipcrawler data directory...')
+		os.makedirs(config['data_dir'], exist_ok=True)
+		shutil.copytree(os.path.join(source_dir, 'default-plugins'), os.path.join(config['data_dir'], 'plugins'))
+		shutil.copytree(os.path.join(source_dir, 'wordlists'), os.path.join(config['data_dir'], 'wordlists'))
+		open(os.path.join(config['data_dir'], 'VERSION-' + VERSION), 'a').close()
+	else:
+		# Update plugins if needed
+		if not os.path.exists(os.path.join(config['data_dir'], 'plugins')):
+			shutil.copytree(os.path.join(source_dir, 'default-plugins'), os.path.join(config['data_dir'], 'plugins'))
+		if not os.path.exists(os.path.join(config['data_dir'], 'wordlists')):
+			shutil.copytree(os.path.join(source_dir, 'wordlists'), os.path.join(config['data_dir'], 'wordlists'))
+		
+		# Update version marker
+		version_file = os.path.join(config['data_dir'], 'VERSION-' + VERSION)
+		if not os.path.exists(version_file):
+			# Clean old version files
+			for f in os.listdir(config['data_dir']):
+				if f.startswith('VERSION-'):
+					os.remove(os.path.join(config['data_dir'], f))
+			open(version_file, 'a').close()
 
-if not os.path.exists(config['data_dir']):
-	shutil.rmtree(config['data_dir'], ignore_errors=True, onerror=None)
-	os.makedirs(config['data_dir'], exist_ok=True)
-	open(os.path.join(config['data_dir'], 'VERSION-' + VERSION), 'a').close()
-	shutil.copytree(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default-plugins'), os.path.join(config['data_dir'], 'plugins'))
-	shutil.copytree(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wordlists'), os.path.join(config['data_dir'], 'wordlists'))
-else:
-	if not os.path.exists(os.path.join(config['data_dir'], 'plugins')):
-		shutil.copytree(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default-plugins'), os.path.join(config['data_dir'], 'plugins'))
-	if not os.path.exists(os.path.join(config['data_dir'], 'wordlists')):
-		shutil.copytree(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wordlists'), os.path.join(config['data_dir'], 'wordlists'))
-	if not os.path.exists(os.path.join(config['data_dir'], 'VERSION-' + VERSION)):
-		warn('It looks like the plugins in ' + config['data_dir'] + ' are outdated. Please remove the ' + config['data_dir'] + ' directory and re-run ipcrawler to rebuild them.')
-
+# Call the new setup function
+setup_config_directories()
 
 # Saves current terminal settings so we can restore them.
 terminal_settings = None
@@ -1521,6 +1622,51 @@ async def run():
 			config[key] = args_dict[key]
 	ipcrawler.args = args
 
+	# Process tags before listing so --list shows accurate results
+	tags = []
+	for tag_group in list(set(filter(None, args.tags.lower().split(',')))):
+		tags.append(list(set(filter(None, tag_group.split('+')))))
+
+	# Remove duplicate lists from list.
+	[ipcrawler.tags.append(t) for t in tags if t not in ipcrawler.tags]
+
+	excluded_tags = []
+	if args.exclude_tags is None:
+		args.exclude_tags = ''
+	if args.exclude_tags != '':
+		for tag_group in list(set(filter(None, args.exclude_tags.lower().split(',')))):
+			excluded_tags.append(list(set(filter(None, tag_group.split('+')))))
+
+		# Remove duplicate lists from list.
+		[ipcrawler.excluded_tags.append(t) for t in excluded_tags if t not in ipcrawler.excluded_tags]
+
+	def check_plugin_tags(plugin):
+		"""Check if plugin matches current tag filtering"""
+		if config['port_scans'] and plugin.slug in config['port_scans']:
+			return True
+		if config['service_scans'] and plugin.slug in config['service_scans']:
+			return True
+		if config['reports'] and plugin.slug in config['reports']:
+			return True
+			
+		plugin_tag_set = set(plugin.tags)
+		
+		# Check if plugin matches any tag group
+		matching_tags = False
+		for tag_group in ipcrawler.tags:
+			if set(tag_group).issubset(plugin_tag_set):
+				matching_tags = True
+				break
+		
+		# Check if plugin is excluded by any excluded tag group
+		excluded_tags = False
+		for tag_group in ipcrawler.excluded_tags:
+			if set(tag_group).issubset(plugin_tag_set):
+				excluded_tags = True
+				break
+		
+		return matching_tags and not excluded_tags
+
 	if args.list:
 		from rich.table import Table
 		from rich.panel import Panel
@@ -1536,46 +1682,65 @@ async def run():
 		table.add_column("Description", style="dim white")
 		
 		plugin_count = 0
+		excluded_count = 0
 		
 		if type in ['plugin', 'plugins', 'port', 'ports', 'portscan', 'portscans']:
 			for p in sorted(ipcrawler.plugin_types['port'], key=lambda x: x.name.lower()):
-				table.add_row(
-					"🔍 PortScan",
-					p.name,
-					f"[dim]{p.slug}[/dim]",
-					p.description if p.description else "[dim]No description[/dim]"
-				)
-				plugin_count += 1
+				if check_plugin_tags(p):
+					table.add_row(
+						"🔍 PortScan",
+						p.name,
+						f"[dim]{p.slug}[/dim]",
+						p.description if p.description else "[dim]No description[/dim]"
+					)
+					plugin_count += 1
+				else:
+					excluded_count += 1
 		
 		if type in ['plugin', 'plugins', 'service', 'services', 'servicescan', 'servicescans']:
 			for p in sorted(ipcrawler.plugin_types['service'], key=lambda x: x.name.lower()):
-				table.add_row(
-					"🔧 ServiceScan",
-					p.name,
-					f"[dim]{p.slug}[/dim]",
-					p.description if p.description else "[dim]No description[/dim]"
-				)
-				plugin_count += 1
+				if check_plugin_tags(p):
+					table.add_row(
+						"🔧 ServiceScan",
+						p.name,
+						f"[dim]{p.slug}[/dim]",
+						p.description if p.description else "[dim]No description[/dim]"
+					)
+					plugin_count += 1
+				else:
+					excluded_count += 1
 		
 		if type in ['plugin', 'plugins', 'report', 'reports', 'reporting']:
 			for p in sorted(ipcrawler.plugin_types['report'], key=lambda x: x.name.lower()):
-				table.add_row(
-					"📊 Report",
-					p.name,
-					f"[dim]{p.slug}[/dim]",
-					p.description if p.description else "[dim]No description[/dim]"
-				)
-				plugin_count += 1
+				if check_plugin_tags(p):
+					table.add_row(
+						"📊 Report",
+						p.name,
+						f"[dim]{p.slug}[/dim]",
+						p.description if p.description else "[dim]No description[/dim]"
+					)
+					plugin_count += 1
+				else:
+					excluded_count += 1
 		
 		# Display the results in a styled panel
 		title = f"Available Plugins"
 		if type not in ['plugin', 'plugins']:
 			title += f" - {type.title()} Type"
 		
+		# Create subtitle with filtering info
+		subtitle_parts = [f"[green]Active: {plugin_count}[/green]"]
+		if excluded_count > 0:
+			subtitle_parts.append(f"[red]Excluded: {excluded_count}[/red]")
+		if len(ipcrawler.tags) > 0:
+			tag_display = " + ".join(["+".join(tag_group) for tag_group in ipcrawler.tags])
+			subtitle_parts.append(f"[yellow]Tags: {tag_display}[/yellow]")
+		subtitle = " | ".join(subtitle_parts)
+		
 		panel = Panel(
 			table,
 			title=f"[bold green]{title}[/bold green]",
-			subtitle=f"[dim]Total: {plugin_count} plugins[/dim]",
+			subtitle=f"[dim]{subtitle}[/dim]",
 			border_style="green",
 			padding=(1, 2)
 		)
@@ -1780,23 +1945,6 @@ async def run():
 			else:
 				ipcrawler.service_scan_semaphore = asyncio.Semaphore(config['max_scans'] - config['max_port_scans'])
 
-	tags = []
-	for tag_group in list(set(filter(None, args.tags.lower().split(',')))):
-		tags.append(list(set(filter(None, tag_group.split('+')))))
-
-	# Remove duplicate lists from list.
-	[ipcrawler.tags.append(t) for t in tags if t not in ipcrawler.tags]
-
-	excluded_tags = []
-	if args.exclude_tags is None:
-		args.exclude_tags = ''
-	if args.exclude_tags != '':
-		for tag_group in list(set(filter(None, args.exclude_tags.lower().split(',')))):
-			excluded_tags.append(list(set(filter(None, tag_group.split('+')))))
-
-		# Remove duplicate lists from list.
-		[ipcrawler.excluded_tags.append(t) for t in excluded_tags if t not in ipcrawler.excluded_tags]
-
 	if config['port_scans']:
 		config['port_scans'] = [x.strip().lower() for x in config['port_scans'].split(',')]
 
@@ -1926,7 +2074,6 @@ async def run():
 	if not args.disable_sanity_checks and len(ipcrawler.pending_targets) > 256:
 		error('A total of ' + str(len(ipcrawler.pending_targets)) + ' targets would be scanned. If this is correct, re-run with the --disable-sanity-checks option to suppress this check.')
 		errors = True
-
 	if not config['force_services']:
 		port_scan_plugin_count = 0
 		for plugin in ipcrawler.plugin_types['port']:

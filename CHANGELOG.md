@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.2] - 2025-06-13 🔄
+
+### 🚀 DEVELOPMENT WORKFLOW OVERHAUL
+**Fixed critical development workflow issues preventing proper git updates and code propagation**
+
+### 🔧 Fixed - Development Infrastructure
+- **Entry Point Confusion**: Fixed `make setup` to use correct development entry point
+  - **Issue**: `ipcrawler-cmd` was calling `ipcrawler.py` instead of `ipcrawler/main.py` with proper `PYTHONPATH`
+  - **Result**: Commands now properly execute development code instead of cached versions
+- **Cache Override Problem**: Fixed Application Support cache overriding source code changes
+  - **Issue**: `make setup` created cached files that ignored git updates
+  - **Solution**: Enhanced `make update` to clean cached files and recreate symlinks to source
+- **Git Update Propagation**: Fixed disconnect between `git pull` and running code
+  - **Issue**: Users could run `git pull` but changes wouldn't take effect due to cached installations
+  - **Solution**: `make update` now ensures all git changes become active immediately
+
+### ✨ Enhanced - Update System
+- **Smart Cache Management**: `make update` now automatically:
+  - Stashes uncommitted changes before git pull
+  - Cleans Application Support cached plugins
+  - Recreates symlinks from cache to source code
+  - Regenerates command scripts with latest code
+  - Updates Python packages and system tools
+  - Restores stashed changes after update
+- **Config Migration**: Enhanced config handling to preserve user settings while updating
+- **Backup Protection**: Automatically backs up user configs before cleaning cache
+
+### 🎯 Enhanced - Tag Filtering System
+- **Fixed `--list` Command**: Now properly applies tag filtering when showing available plugins
+- **Tag Processing Logic**: Improved subset matching for complex tag combinations like `default+safe+quick`
+- **Plugin Count Display**: Accurate active/excluded plugin counts in `--list` output
+- **Performance Optimization**: Faster plugin filtering with proper tag subset logic
+
+### 🛠️ Fixed - Plugin Infrastructure  
+- **Path Quoting Issues**: Fixed wordlist paths with spaces in directory busting tools
+  - **Affected**: feroxbuster, gobuster, dirsearch, ffuf, dirb commands
+  - **Issue**: Paths like `/Users/.../Application Support/ipcrawler/wordlists/` failed due to unescaped spaces
+  - **Solution**: Proper path quoting in all plugin command generation
+- **Duplicate Plugin Prevention**: Disabled conflicting `all-tcp-ports` scanner to prevent duplicate scans
+- **Plugin Symlink Management**: Fixed plugin loading to use source code instead of cached copies
+
+### 📋 Enhanced - User Workflow
+- **Clear Update Process**: Users can now safely use standard git workflow:
+  ```bash
+  git pull           # Gets latest source code  
+  make update        # Cleans cache, updates everything, activates changes
+  ```
+- **Development Mode**: Enhanced developer experience with proper source code execution
+- **Tool Installation**: Improved missing tool detection and installation suggestions
+
+### 🔍 Technical Improvements
+- **Entry Point Standardization**: All execution paths now use proper development entry points
+- **Configuration Consistency**: Unified config loading between development and installed versions
+- **Error Handling**: Better error messages for setup and update operations
+- **Cross-Platform Compatibility**: Enhanced macOS and Linux support for development workflow
+
+---
+
 ## [2.0.1] - 2025-06-13 🐛
 
 ### 🐛 CRITICAL BUG FIXES

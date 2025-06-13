@@ -44,7 +44,8 @@ create_command() {
 # Resolve the real path of the script (follow symlinks)
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-source "$DIR/venv/bin/activate" && python3 "$DIR/ipcrawler.py" "$@"
+cd "$DIR"
+source "$DIR/venv/bin/activate" && PYTHONPATH="$DIR" python3 "$DIR/ipcrawler/main.py" "$@"
 EOF
     
     # Make it executable

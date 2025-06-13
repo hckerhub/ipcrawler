@@ -1,6 +1,6 @@
 from ipcrawler.plugins import PortScan
 from ipcrawler.config import config
-import re, requests
+import re, requests, os
 
 class AllTCPPortScan(PortScan):
 
@@ -11,8 +11,23 @@ class AllTCPPortScan(PortScan):
 		self.type = 'tcp'
 		self.specific_ports = True
 		self.tags = ['default', 'default-port-scan', 'safe', 'long']
+		# Set higher priority than top-tcp-ports (which has priority=0) to run after it
+		self.priority = 1
 
 	async def run(self, target):
+		# Check if top TCP ports scan already completed successfully
+		quick_scan_file = os.path.join(target.scandir, '_quick_tcp_nmap.txt')
+		if os.path.exists(quick_scan_file):
+			# Check if the quick scan found any open ports
+			try:
+				with open(quick_scan_file, 'r') as f:
+					content = f.read()
+					if 'open' in content.lower():
+						target.info('Skipping full TCP port scan - quick scan already found open ports', verbosity=1)
+						return []
+			except:
+				pass
+			
 		if config['proxychains']:
 			traceroute_os = ''
 		else:

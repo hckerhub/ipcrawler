@@ -35,7 +35,7 @@ def get_ipcrawler_ascii():
     ⚡ Network Spider - Weaving Through Your Infrastructure ⚡
     """
 
-def show_startup_banner(targets=None, version="2.0.1"):
+def show_startup_banner(targets=None, version="2.0.2"):
 	"""Display feroxbuster-style startup banner"""
 	from ipcrawler.config import config
 	if not RICH_AVAILABLE or config['accessible']:
