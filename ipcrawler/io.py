@@ -67,6 +67,8 @@ def get_config_display_table(targets=None):
 	"""Generate configuration display table"""
 	if not RICH_AVAILABLE:
 		return None
+	
+	from ipcrawler.main import VERSION
 		
 	table = Table(show_header=False, box=None, padding=(0, 1))
 	table.add_column("Setting", style="dim blue", width=20)
@@ -89,7 +91,7 @@ def get_config_display_table(targets=None):
 		("⏱️  Timeout", f"{config.get('timeout')}m" if config.get('timeout') else "None"),
 		("🔧 Status Codes", "All Status Codes"),
 		("🔍 Timeout (secs)", "7"),
-		("👤 User-Agent", f"ipcrawler/{version if 'version' in locals() else '2.0.1'}"),
+		("👤 User-Agent", f"ipcrawler/{VERSION}"),
 		("💾 Config File", config.get('global_file', '/etc/ipcrawler/config.toml') or '/etc/ipcrawler/config.toml'),
 		("🔗 Extract Links", "true"),
 		("🌐 HTTP methods", "[GET]"),
