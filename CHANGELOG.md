@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2025-01-20 🎨
+
+### 🎨 MAJOR UI OVERHAUL - Feroxbuster-Inspired Interface
+**ipcrawler** v2.0.0 introduces a complete visual transformation inspired by feroxbuster's clean, professional interface while maintaining all core functionality and backwards compatibility.
+
+### ✨ Added
+- **🕷️ Creepy ASCII Art**: Spider-themed startup banner with version info and professional branding
+- **📊 Configuration Display**: Beautiful Rich-formatted configuration table showing all TOML settings at startup
+- **📈 Live Progress Bars**: Real-time progress tracking with animated spinners for port and service scans
+- **🎯 Enhanced Discovery Output**: Feroxbuster-style `GET 200 tcp/22 ssh 154.53.32.192` formatting for all discoveries
+- **📋 Rich Plugin Listing**: Completely redesigned `--list` command with organized tables, icons, and usage examples
+- **🎪 Status Icons**: Emoji-based status indicators (🔍 PortScan, 🔧 ServiceScan, 📊 Report, 🚨 ERROR, ⚠️ WARNING)
+
+### 🔧 Enhanced
+- **Terminal Output**: All verbosity levels now use Rich formatting with consistent color schemes and styling
+- **Progress Tracking**: ProgressManager class with concurrent progress bars, percentage completion, and elapsed time
+- **Error Messages**: Professional error formatting with clean color code removal and enhanced readability
+- **Scan Summaries**: Beautiful completion statistics with total scans, elapsed time, and discovery counts
+- **Configuration Integration**: Seamless integration with existing TOML configuration system
+
+### 🎨 Visual Improvements
+- **Startup Banner**: Professional separator lines and clean layout matching feroxbuster aesthetic
+- **Message Formatting**: `Text.assemble()` for consistent styling across all output types
+- **Color Management**: Proper cleanup of legacy color codes (`{bright}`, `{rst}`, `{byellow}`, etc.)
+- **Interactive Elements**: Enhanced progress bars that disappear when complete for clean terminal output
+- **Plugin Organization**: Alphabetically sorted plugin lists with type-specific icons and descriptions
+
+### 🔄 Technical Changes
+- **Rich Library Integration**: Full utilization of Rich's Table, Panel, Progress, and Text components
+- **Backwards Compatibility**: All existing TOML configurations and plugin systems remain unchanged
+- **Performance Optimization**: Parallel progress tracking without impacting scan performance
+- **Code Organization**: Enhanced `io.py` with modular functions for different UI components
+
+### 📦 Dependencies
+- **Rich Library**: Enhanced terminal output with professional formatting capabilities
+- **Progress Tracking**: Real-time updates with animated spinners and completion percentages
+- **Configuration Display**: Dynamic TOML value rendering in startup configuration table
+
+### 🐛 Fixed
+- **Message Processing**: Improved handling of all message types including basic `[*]` info messages
+- **Color Code Cleanup**: Proper removal of legacy formatting codes for clean Rich rendering
+- **Progress Bar Lifecycle**: Automatic cleanup of completed progress bars for tidy terminal output
+
+---
+
 ## [1.1.4] - 2025-01-12 🛠️
 
 ### 🛠️ Plugin & Backup Improvements

@@ -24,7 +24,7 @@ except ImportError:
 colorama.init()
 
 from ipcrawler.config import config, configurable_keys, configurable_boolean_keys
-from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, fail, CommandStreamReader
+from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, fail, CommandStreamReader, show_startup_banner, show_scan_summary, progress_manager
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
@@ -611,10 +611,16 @@ async def port_scan(plugin, target):
 	async with target.ipcrawler.port_scan_semaphore:
 		info('Port scan {bblue}' + plugin.name + ' {green}(' + plugin.slug + '){rst} running against {byellow}' + target.address + '{rst}', verbosity=1)
 
+		# Add progress bar for port scans
+		task_id = progress_manager.add_task(f"🔍 Scanning {plugin.name} on {target.address}", total=100)
+		
+		# Start progress simulation (estimate 15 seconds for port scan)
+		progress_manager.simulate_progress(task_id, 15)
+		
 		start_time = time.time()
 
 		async with target.lock:
-			target.running_tasks[plugin.slug] = {'plugin': plugin, 'processes': [], 'start': start_time}
+			target.running_tasks[plugin.slug] = {'plugin': plugin, 'processes': [], 'start': start_time, 'progress_task': task_id}
 
 		try:
 			result = await plugin.run(target)
@@ -647,6 +653,10 @@ async def port_scan(plugin, target):
 							file.writelines('\n')
 
 		elapsed_time = calculate_elapsed_time(start_time)
+
+		# Complete progress bar
+		if task_id:
+			progress_manager.update_task(task_id, advance=100)
 
 		async with target.lock:
 			target.running_tasks.pop(plugin.slug, None)
@@ -735,10 +745,16 @@ async def service_scan(plugin, service):
 
 			info('Service scan {bblue}' + plugin.name + ' {green}(' + tag + '){rst} running against {byellow}' + service.target.address + '{rst}', verbosity=1)
 
+			# Add progress bar for service scans
+			task_id = progress_manager.add_task(f"🔧 {plugin.name} on {service.target.address}:{service.port}", total=100)
+
+			# Start progress simulation (estimate 8 seconds for service scan)
+			progress_manager.simulate_progress(task_id, 8)
+
 			start_time = time.time()
 
 			async with service.target.lock:
-				service.target.running_tasks[tag] = {'plugin': plugin, 'processes': [], 'start': start_time}
+				service.target.running_tasks[tag] = {'plugin': plugin, 'processes': [], 'start': start_time, 'progress_task': task_id}
 
 			try:
 				result = await plugin.run(service)
@@ -771,6 +787,10 @@ async def service_scan(plugin, service):
 								file.writelines('\n')
 
 			elapsed_time = calculate_elapsed_time(start_time)
+
+			# Complete progress bar
+			if task_id:
+				progress_manager.update_task(task_id, advance=100)
 
 			async with service.target.lock:
 				service.target.running_tasks.pop(tag, None)
@@ -1502,16 +1522,84 @@ async def run():
 	ipcrawler.args = args
 
 	if args.list:
+		from rich.table import Table
+		from rich.panel import Panel
+		from ipcrawler.io import rich_console
+		
 		type = args.list.lower()
+		
+		# Create a table for plugin listing
+		table = Table(show_header=True, header_style="bold cyan", border_style="dim blue")
+		table.add_column("Plugin Type", style="green", min_width=10)
+		table.add_column("Name", style="cyan", min_width=20)
+		table.add_column("Slug", style="magenta", min_width=15)
+		table.add_column("Description", style="dim white")
+		
+		plugin_count = 0
+		
 		if type in ['plugin', 'plugins', 'port', 'ports', 'portscan', 'portscans']:
-			for p in ipcrawler.plugin_types['port']:
-				print('PortScan: ' + p.name + ' (' + p.slug + ')' + (' - ' + p.description if p.description else ''))
+			for p in sorted(ipcrawler.plugin_types['port'], key=lambda x: x.name.lower()):
+				table.add_row(
+					"🔍 PortScan",
+					p.name,
+					f"[dim]{p.slug}[/dim]",
+					p.description if p.description else "[dim]No description[/dim]"
+				)
+				plugin_count += 1
+		
 		if type in ['plugin', 'plugins', 'service', 'services', 'servicescan', 'servicescans']:
-			for p in ipcrawler.plugin_types['service']:
-				print('ServiceScan: ' + p.name + ' (' + p.slug + ')' + (' - ' + p.description if p.description else ''))
+			for p in sorted(ipcrawler.plugin_types['service'], key=lambda x: x.name.lower()):
+				table.add_row(
+					"🔧 ServiceScan",
+					p.name,
+					f"[dim]{p.slug}[/dim]",
+					p.description if p.description else "[dim]No description[/dim]"
+				)
+				plugin_count += 1
+		
 		if type in ['plugin', 'plugins', 'report', 'reports', 'reporting']:
-			for p in ipcrawler.plugin_types['report']:
-				print('Report: ' + p.name + ' (' + p.slug + ')' + (' - ' + p.description if p.description else ''))
+			for p in sorted(ipcrawler.plugin_types['report'], key=lambda x: x.name.lower()):
+				table.add_row(
+					"📊 Report",
+					p.name,
+					f"[dim]{p.slug}[/dim]",
+					p.description if p.description else "[dim]No description[/dim]"
+				)
+				plugin_count += 1
+		
+		# Display the results in a styled panel
+		title = f"Available Plugins"
+		if type not in ['plugin', 'plugins']:
+			title += f" - {type.title()} Type"
+		
+		panel = Panel(
+			table,
+			title=f"[bold green]{title}[/bold green]",
+			subtitle=f"[dim]Total: {plugin_count} plugins[/dim]",
+			border_style="green",
+			padding=(1, 2)
+		)
+		
+		rich_console.print()
+		rich_console.print(panel)
+		rich_console.print()
+		
+		# Show usage examples
+		examples_table = Table(show_header=False, border_style="dim", show_edge=False)
+		examples_table.add_column("", style="dim cyan", min_width=20)
+		examples_table.add_column("", style="dim")
+		examples_table.add_row("--list", "Show all plugins")
+		examples_table.add_row("--list port", "Show only port scan plugins")
+		examples_table.add_row("--list service", "Show only service scan plugins")
+		examples_table.add_row("--list report", "Show only report plugins")
+		
+		rich_console.print(Panel(
+			examples_table,
+			title="[dim]💡 Usage Examples[/dim]",
+			border_style="dim blue",
+			padding=(0, 1)
+		))
+		rich_console.print()
 
 		sys.exit(0)
 
@@ -1874,6 +1962,12 @@ async def run():
 
 	num_initial_targets = max(1, math.ceil(config['max_port_scans'] / port_scan_plugin_count))
 
+	# Show startup banner with feroxbuster-style interface
+	show_startup_banner(ipcrawler.pending_targets, VERSION)
+
+	# Start progress manager for long scans
+	progress_manager.start()
+	
 	start_time = time.time()
 
 	if not config['disable_keyboard_control']:
@@ -1937,6 +2031,9 @@ async def run():
 	if not config['disable_keyboard_control']:
 		keyboard_monitor.cancel()
 
+	# Stop progress manager
+	progress_manager.stop()
+
 	# If there's only one target we don't need a combined report
 	if len(ipcrawler.completed_targets) > 1:
 		for plugin in ipcrawler.plugin_types['report']:
@@ -1974,8 +2071,15 @@ async def run():
 			await asyncio.sleep(1)
 
 		elapsed_time = calculate_elapsed_time(start_time)
-		info('{bright}Finished scanning all targets in ' + elapsed_time + '!{rst}')
-		info('{bright}Don\'t forget to check out more commands to run manually in the _manual_commands.txt file in each target\'s scans directory!')
+		
+		# Use enhanced scan summary
+		target_count = len(ipcrawler.completed_targets)
+		show_scan_summary(target_count, elapsed_time)
+		
+		# Fallback to standard message if Rich not available
+		if not RICH_AVAILABLE or config['accessible']:
+			info('{bright}Finished scanning all targets in ' + elapsed_time + '!{rst}')
+			info('{bright}Don\'t forget to check out more commands to run manually in the _manual_commands.txt file in each target\'s scans directory!')
 
 		# VHost Discovery Post-Processing
 		if config.get('vhost_discovery', {}).get('enabled', True):
@@ -2004,7 +2108,7 @@ async def run():
 				warn(f'VHost post-processing failed: {e}')
 
 	if ipcrawler.missing_services:
-		warn('{byellow}ipcrawler identified the following services, but could not match them to any plugins based on the service name. Please report these to Tib3rius: ' + ', '.join(ipcrawler.missing_services) + '{rst}')
+		warn('{byellow}ipcrawler identified the following services, but could not match them to any plugins based on the service name. Please report these to neur0map: ' + ', '.join(ipcrawler.missing_services) + '{rst}')
 
 	if not config['disable_keyboard_control']:
 		# Restore original terminal settings.
