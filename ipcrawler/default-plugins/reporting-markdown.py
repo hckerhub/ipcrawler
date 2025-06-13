@@ -7,6 +7,7 @@ class Markdown(Report):
 	def __init__(self):
 		super().__init__()
 		self.name = 'Markdown'
+		self.tags = ['default', 'report', 'safe', 'quick']
 
 	async def run(self, targets):
 		if len(targets) > 1:

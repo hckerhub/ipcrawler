@@ -10,7 +10,7 @@ class RichSummary(Report):
 		self.name = 'Rich Summary'
 		self.slug = 'rich-summary'
 		self.description = 'Comprehensive HTML summary report with all findings and results'
-		self.tags = ['default', 'report', 'summary']
+		self.tags = ['default', 'report', 'summary', 'safe', 'quick']
 
 	async def run(self, targets):
 		for target in targets:

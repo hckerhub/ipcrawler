@@ -35,7 +35,9 @@
 #
 # TO CHANGE BACK TO EVERYTHING: Change line below to: tags = 'default'
 # TO RUN ONLY SAFEST TOOLS: Change line below to: tags = 'default+safe'
+# ═══════════════════════════════════════════════════════════════════════════════
 tags = 'default+safe+quick'
+# ═══════════════════════════════════════════════════════════════════════════════
 
 # Configure VHost discovery options
 [vhost_discovery]

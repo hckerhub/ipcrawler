@@ -8,7 +8,7 @@ class CherryTree(Report):
 	def __init__(self):
 		super().__init__()
 		self.name = 'CherryTree'
-		self.tags = []
+		self.tags = ['default', 'report', 'safe', 'quick']
 
 	async def run(self, targets):
 		if len(targets) > 1:
