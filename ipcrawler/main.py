@@ -656,7 +656,7 @@ async def port_scan(plugin, target):
 
 		# Complete progress bar
 		if task_id:
-			progress_manager.update_task(task_id, advance=100)
+			progress_manager.complete_task(task_id)
 
 		async with target.lock:
 			target.running_tasks.pop(plugin.slug, None)
@@ -790,7 +790,7 @@ async def service_scan(plugin, service):
 
 			# Complete progress bar
 			if task_id:
-				progress_manager.update_task(task_id, advance=100)
+				progress_manager.complete_task(task_id)
 
 			async with service.target.lock:
 				service.target.running_tasks.pop(tag, None)

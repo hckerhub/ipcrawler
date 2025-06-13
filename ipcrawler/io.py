@@ -26,7 +26,7 @@ def get_ipcrawler_ascii():
    ▒██▒▓██░ ██▓▒▒▓█    ▄ ▓██ ░▄█ ▒▒██  ▀█▄  ▒█░ █ ░█ ▒██░    ▒███   ▓██ ░▄█ ▒
    ░██░▒██▄█▓▒ ▒▒▓▓▄ ▄██▒▒██▀▀█▄  ░██▄▄▄▄██ ░█░ █ ░█ ▒██░    ▒▓█  ▄ ▒██▀▀█▄  
    ░██░▒██▒ ░  ░▒ ▓███▀ ░░██▓ ▒██▒ ▓█   ▓██▒░░██▒██▓ ░██████▒░▒████▒░██▓ ▒██▒
-   ░▓  ▒▓▒░ ░  ░░ ░▒ ▒  ░░ ▒▓ ░▒▓░ ▒▒   ▓▒█░░ ▓░▒ ▒  ░ ▒░▓  ░░░ ▒░ ░░ ▒▓ ░▒▓░
+   ░▓  ▒▓▒░ ░  ░░ ░▒ ▒  ░░ ▒▓ ░▒▓░ ▒▒   ▓▒█░░ ▓░▒ ▒  ░ ░░▓  ░░░ ▒░ ░░ ▒▓ ░▒▓░
     ▒ ░░▒ ░       ░  ▒     ░▒ ░ ▒░  ▒   ▒▒ ░  ▒ ░ ░  ░ ░ ▒  ░ ░ ░  ░  ░▒ ░ ▒░
     ▒ ░░░       ░          ░░   ░   ░   ▒     ░   ░    ░ ░      ░     ░░   ░ 
     ░           ░ ░         ░           ░  ░    ░        ░  ░   ░  ░   ░     
@@ -498,6 +498,23 @@ class ProgressManager:
 				# Mark as complete and schedule removal
 				import asyncio
 				asyncio.create_task(self._remove_task_after_delay(task_id))
+	
+	def complete_task(self, task_id):
+		"""Complete a task by setting it to 100%"""
+		if not self.active or task_id is None:
+			return
+		
+		if task_id in self.tasks:
+			current_progress = self.progress.tasks[task_id].completed
+			total = self.tasks[task_id]['total']
+			remaining = total - current_progress
+			
+			if remaining > 0:
+				self.progress.update(task_id, advance=remaining)
+			
+			# Schedule removal
+			import asyncio
+			asyncio.create_task(self._remove_task_after_delay(task_id))
 	
 	async def _remove_task_after_delay(self, task_id, delay=2):
 		"""Remove completed task after delay"""
