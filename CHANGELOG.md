@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2025-01-12 🛠️
+
+### 🛠️ Plugin & Backup Improvements
+- **Fixed Plugin Loading**: Resolved "datetime not a subclass" error by filtering out imported classes from plugin validation
+- **Enhanced Backup Location**: VHost /etc/hosts backups now stored in target scan directory instead of /etc/ (survives terminal closure)
+- **Improved Plugin Validation**: Plugin loader now only validates classes defined in plugin files, not imported dependencies
+- **Better Backup Persistence**: Backup files stored in `results/IP/hosts.backup.timestamp` for easy access and restoration
+
+---
+
 ## [1.1.3] - 2025-01-12 🔥
 
 ### 🔥 HOTFIX - Critical IP Extraction Bug

@@ -28,7 +28,7 @@ from ipcrawler.io import slugify, e, fformat, cprint, debug, info, warn, error, 
 from ipcrawler.plugins import Pattern, PortScan, ServiceScan, Report, ipcrawler
 from ipcrawler.targets import Target, Service
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 def show_rich_help():
 	"""Display beautiful help output using Rich library"""
@@ -1310,6 +1310,10 @@ async def run():
 					clsmembers = inspect.getmembers(plugin, predicate=inspect.isclass)
 					for (_, c) in clsmembers:
 						if c.__module__ in ['ipcrawler.plugins', 'ipcrawler.targets']:
+							continue
+
+						# Skip imported classes (only process classes defined in this plugin file)
+						if c.__module__ != plugin.__name__:
 							continue
 
 						if c.__name__.lower() in config['protected_classes']:

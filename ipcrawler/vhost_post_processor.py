@@ -75,14 +75,23 @@ class VHostPostProcessor:
             print(f"❌ Error reading /etc/hosts: {e}")
             
     def backup_hosts_file(self):
-        """Create backup of /etc/hosts"""
+        """Create backup of /etc/hosts in scan directory"""
         vhost_config = config.get('vhost_discovery', {})
         if not vhost_config.get('backup_hosts_file', True):
             print("⚠️  Backup disabled in config - proceeding without backup")
             return "/etc/hosts"  # Return original path to continue
             
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_path = f"/etc/hosts.backup.{timestamp}"
+        
+        # Store backup in the first scan directory (target directory)
+        if self.scan_directories:
+            # Get the target directory (parent of scan directory)
+            target_dir = os.path.dirname(self.scan_directories[0])
+            backup_path = os.path.join(target_dir, f"hosts.backup.{timestamp}")
+        else:
+            # Fallback to /etc/ if no scan directories
+            backup_path = f"/etc/hosts.backup.{timestamp}"
+            
         try:
             shutil.copy2('/etc/hosts', backup_path)
             print(f"✅ Created backup: {backup_path}")
@@ -290,7 +299,7 @@ class VHostPostProcessor:
                     if self.add_hosts_entries(new_vhosts):
                         print("🎉 VHost entries successfully added!")
                         print(f"💡 Use 'sudo nano /etc/hosts' to edit manually if needed")
-                        print(f"🔄 Restore with: sudo cp {backup_path} /etc/hosts")
+                        print(f"🔄 Restore with: sudo cp '{backup_path}' /etc/hosts")
                     break
                     
                 elif choice in ['n', 'no']:
