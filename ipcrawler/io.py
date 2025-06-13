@@ -37,6 +37,7 @@ def get_ipcrawler_ascii():
 
 def show_startup_banner(targets=None, version="1.1.4"):
 	"""Display feroxbuster-style startup banner"""
+	from ipcrawler.config import config
 	if not RICH_AVAILABLE or config['accessible']:
 		return
 	
@@ -170,6 +171,7 @@ def cprint(*args, color=Fore.RESET, char='*', sep=' ', end='\n', frame_index=1, 
 		return fmted
 
 def debug(*args, color=Fore.GREEN, sep=' ', end='\n', file=sys.stdout, **kvargs):
+	from ipcrawler.config import config
 	if config['verbose'] >= 2:
 		if config['accessible']:
 			args = ('Debug:',) + args
@@ -185,6 +187,8 @@ def debug(*args, color=Fore.GREEN, sep=' ', end='\n', file=sys.stdout, **kvargs)
 			cprint(*args, color=color, char='-', sep=sep, end=end, file=file, frame_index=2, **kvargs)
 
 def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
+	# Import config fresh each time to avoid import-time initialization issues
+	from ipcrawler.config import config
 	if RICH_AVAILABLE and not config['accessible']:
 		message = sep.join(str(arg) for arg in args)
 		
@@ -359,13 +363,93 @@ def info(*args, sep=' ', end='\n', file=sys.stdout, **kvargs):
 			rich_console.print(pattern_text)
 			return
 		
+		# Enhanced VHost messages
+		elif 'VHost discovered:' in message or 'vhost' in message.lower():
+			import re
+			clean_message = message.replace('{rst}', '').replace('{bmagenta}', '').replace('{bright}', '').replace('{yellow}', '').replace('{crst}', '').replace('{bgreen}', '').replace('{byellow}', '')
+			
+			# Extract VHost information
+			vhost_match = re.search(r'VHost discovered:\s*([^\s]+)', clean_message)
+			if vhost_match:
+				vhost = vhost_match.group(1).strip()
+				vhost_text = Text.assemble(
+					("GET", "bold blue"),
+					"    ",
+					("200", "bold green"),
+					"    ",
+					("🌐 VHOST", "bold cyan"),
+					"     ",
+					("discovered: ", "dim"),
+					(f"{vhost}", "bold yellow")
+				)
+			else:
+				vhost_text = Text.assemble(
+					("GET", "bold blue"),
+					"    ",
+					("200", "bold green"),
+					"    ",
+					("🌐 VHOST", "bold cyan"),
+					"     ",
+					(clean_message, "cyan")
+				)
+			rich_console.print(vhost_text)
+			return
+		
 		# Handle verbosity-specific messages
 		if 'verbosity' in kvargs:
 			verbosity_level = kvargs['verbosity']
 			if config['verbose'] < verbosity_level:
 				return  # Don't show if verbosity is too low
+		
+		# DEFAULT: Convert ALL remaining messages to feroxbuster style
+		# Clean up all color codes
+		clean_message = message
+		for old_code in ['{rst}', '{bright}', '{byellow}', '{bmagenta}', '{bgreen}', '{crst}', '{yellow}', '{green}', '{blue}', '{red}', '{cyan}', '{magenta}', '{bblue}', '{bred}', '{bcyan}']:
+			clean_message = clean_message.replace(old_code, '')
+		
+		# Determine message type and icon
+		if '[' in clean_message and ']' in clean_message:
+			# Extract the bracketed part for target/tag info
+			bracket_match = re.search(r'\[([^\]]+)\]', clean_message)
+			if bracket_match:
+				bracket_content = bracket_match.group(1)
+				remaining_message = clean_message.replace(f'[{bracket_content}]', '').strip()
+				
+				default_text = Text.assemble(
+					("GET", "bold blue"),
+					"    ",
+					("200", "bold green"),
+					"    ",
+					("📡 INFO", "bold cyan"),
+					"      ",
+					(f"[{bracket_content}] ", "dim yellow"),
+					(remaining_message, "white")
+				)
+			else:
+				default_text = Text.assemble(
+					("GET", "bold blue"),
+					"    ",
+					("200", "bold green"),
+					"    ",
+					("📡 INFO", "bold cyan"),
+					"      ",
+					(clean_message, "white")
+				)
+		else:
+			default_text = Text.assemble(
+				("GET", "bold blue"),
+				"    ",
+				("200", "bold green"),
+				"    ",
+				("📡 INFO", "bold cyan"),
+				"      ",
+				(clean_message, "white")
+			)
+		
+		rich_console.print(default_text)
+		return
 	
-	# Fall back to standard cprint
+	# Only use old style if Rich is not available
 	cprint(*args, color=Fore.BLUE, char='*', sep=sep, end=end, file=file, frame_index=2, **kvargs)
 
 def warn(*args, sep=' ', end='\n', file=sys.stderr,**kvargs):
