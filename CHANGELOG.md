@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2025-01-20 🎨
+## [2.0.0] - 2025-06-13 🎨
 
 ### 🎨 MAJOR UI OVERHAUL - Feroxbuster-Inspired Interface
 **ipcrawler** v2.0.0 introduces a complete visual transformation inspired by feroxbuster's clean, professional interface while maintaining all core functionality and backwards compatibility.
