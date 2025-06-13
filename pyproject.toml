@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "ipcrawler"
-version = "1.1.1"
+version = "1.1.2"
 description = "A multi-threaded network reconnaissance tool which performs automated enumeration of services."
-authors = ["Tib3rius"]
+authors = ["neur0map"]
 license = "GNU GPL v3"
 exclude = ["ipcrawler.py"]
 packages = [

@@ -31,6 +31,9 @@ class VHostPostProcessor:
     def discover_vhosts_from_files(self):
         """Parse VHost discovery files and extract hostnames"""
         for scan_dir in self.scan_directories:
+            # Extract IP from the scan directory name (which should be the target IP)
+            scan_dir_ip = os.path.basename(scan_dir)
+            
             for root, dirs, files in os.walk(scan_dir):
                 for file in files:
                     if file.startswith('vhost_redirects_') and file.endswith('.txt'):
@@ -39,8 +42,8 @@ class VHostPostProcessor:
                             with open(file_path, 'r') as f:
                                 content = f.read()
                                 
-                            # Extract IP from scan directory name or file content
-                            ip = os.path.basename(root)
+                            # Use the scan directory IP as the target IP
+                            ip = scan_dir_ip
                             
                             # Extract hostname from file content
                             for line in content.split('\n'):
@@ -232,60 +235,101 @@ class VHostPostProcessor:
                 import sys
                 sys.stdout.flush()
                 
-                # Try to get input with timeout fallback
-                print(f"\n[Y]es / [N]o / [S]how details: ", end='', flush=True)
+                # Enhanced input prompt with better visibility
+                print(f"\n[Y]es / [N]o / [S]how details: ", end='')
+                sys.stdout.flush()
                 
+                # Try to get input with better terminal handling
                 try:
+                    import termios
+                    import tty
+                    
+                    # Save current terminal settings
+                    old_settings = termios.tcgetattr(sys.stdin)
+                    
+                    try:
+                        # Set terminal to raw mode for better input visibility
+                        tty.setraw(sys.stdin.fileno())
+                        
+                        # Read single character
+                        char = sys.stdin.read(1)
+                        
+                        # Echo the character so user can see what they typed
+                        print(char, end='', flush=True)
+                        
+                        # If it's not a newline, wait for Enter
+                        if char != '\n':
+                            while True:
+                                next_char = sys.stdin.read(1)
+                                if next_char == '\n' or next_char == '\r':
+                                    print()  # Add newline
+                                    break
+                        
+                        choice = char.lower().strip()
+                        
+                    finally:
+                        # Restore terminal settings
+                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                        
+                except (ImportError, OSError):
+                    # Fallback to regular input if termios not available
                     choice = input().lower().strip()
-                except (EOFError, KeyboardInterrupt):
-                    print("\n\n⚠️  Input interrupted. Defaulting to 'No'")
-                    choice = 'n'
-                except Exception as e:
-                    print(f"\n⚠️  Input error: {e}. Defaulting to 'No'")
-                    choice = 'n'
                 
-                if choice in ['y', 'yes']:
-                    # Create backup first
+                if choice in ['y', 'yes', '']:
+                    # Create backup
                     backup_path = self.backup_hosts_file()
-                    if backup_path:
-                        # Add entries
-                        if self.add_hosts_entries(new_vhosts):
-                            print("\n🎉 VHost entries successfully added!")
-                            print("💡 Use 'sudo nano /etc/hosts' to edit manually if needed")
-                            print(f"🔄 Restore with: sudo cp {backup_path} /etc/hosts")
-                        else:
-                            print("\n❌ Failed to add VHost entries")
-                    else:
-                        print("\n❌ Cannot proceed without backup")
+                    if backup_path is None:
+                        print("❌ Failed to create backup. Aborting.")
+                        return
+                        
+                    print(f"✅ Created backup: {backup_path}")
+                    
+                    # Add entries
+                    if self.add_hosts_entries(new_vhosts):
+                        print("🎉 VHost entries successfully added!")
+                        print(f"💡 Use 'sudo nano /etc/hosts' to edit manually if needed")
+                        print(f"🔄 Restore with: sudo cp {backup_path} /etc/hosts")
                     break
                     
                 elif choice in ['n', 'no']:
-                    print("\n⏭️  Skipping /etc/hosts modification")
-                    print("📝 Manual commands available in _manual_commands.txt files")
+                    print("❌ Skipping VHost addition")
+                    print("\n📝 Manual addition commands:")
+                    for vhost in new_vhosts:
+                        print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
                     break
                     
-                elif choice in ['s', 'show', 'details']:
-                    print("\n📋 VHost Details:")
+                elif choice in ['s', 'show']:
+                    print("\n📋 Detailed VHost Information:")
                     for vhost in new_vhosts:
-                        print(f"\n🔗 {vhost['hostname']}")
-                        print(f"   IP: {vhost['ip']}")
-                        print(f"   Source: {vhost['file']}")
-                    attempt = 0  # Reset attempts for details view
-                    continue
+                        print(f"  📁 File: {vhost['file']}")
+                        print(f"  🌐 Hostname: {vhost['hostname']}")
+                        print(f"  📍 IP: {vhost['ip']}")
+                        print()
+                    continue  # Ask again
                     
                 else:
-                    print("❌ Please enter Y, N, or S")
+                    print(f"❌ Invalid choice: '{choice}'. Please enter Y, N, or S.")
                     attempt += 1
-                    if attempt >= max_attempts:
-                        print(f"\n⚠️  Too many invalid attempts. Defaulting to 'No'")
-                        print("📝 Manual commands available in _manual_commands.txt files")
-                        break
                     continue
                     
-            except Exception as e:
-                print(f"\n❌ Unexpected error during input: {e}")
-                print("📝 Defaulting to manual mode. Commands available in _manual_commands.txt files")
+            except (EOFError, KeyboardInterrupt):
+                print("\n❌ Input cancelled by user")
+                print("\n📝 Manual addition commands:")
+                for vhost in new_vhosts:
+                    print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
                 break
+                
+            except Exception as e:
+                print(f"\n❌ Input error: {e}")
+                attempt += 1
+                if attempt >= max_attempts:
+                    print("❌ Max input attempts reached. Falling back to manual commands:")
+                    for vhost in new_vhosts:
+                        print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
+                    break
+                else:
+                    print(f"🔄 Retrying... (attempt {attempt + 1}/{max_attempts})")
+                    continue
 
 def main():
     """Main entry point"""

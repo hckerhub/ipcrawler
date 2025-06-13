@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2025-01-12 🚨
+
+### 🚨 Critical Bug Fixes
+- **CRITICAL**: Fixed incorrect IP address extraction in VHost post-processor (was using directory name "scans" instead of target IP)
+- **CRITICAL**: Fixed invisible input during VHost interactive prompts with enhanced terminal handling
+- **Enhanced Input System**: Added character echoing and proper terminal mode management for better user experience
+- **Improved Error Handling**: Better fallback options for input failures with multiple retry attempts
+- **Visual Feedback**: Enhanced interactive VHost management sessions with clearer prompts and status messages
+
+---
+
 ## [1.1.1] - 2025-06-12 🔧
 
 ### 🐛 Fixed
