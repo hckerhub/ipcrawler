@@ -7,11 +7,13 @@ A simplified, streamlined version of **AutoRecon** while keeping core functional
 
 **ipcrawler** is a fork of [**AutoRecon**](https://github.com/Tib3rius/AutoRecon) by [**Tib3rius**](https://github.com/Tib3rius). All core functionality, plugins, and the brilliant multi-threaded architecture are thanks to his incredible work. This fork simply provides a cleaner setup experience while maintaining all the powerful features of the original tool.
 
-## 🔍 Project Status
+## ✅ Project Status
 
-![Version](https://img.shields.io/badge/Version-v2.0.2-orange) ![Status](https://img.shields.io/badge/Status-Testing-yellow) ![Stability](https://img.shields.io/badge/Stability-Beta-red)
+![Version](https://img.shields.io/badge/Version-v2.1.0-brightgreen)
+![Status](https://img.shields.io/badge/Status-Stable-brightgreen)
+![Stability](https://img.shields.io/badge/Stability-Production--Ready-brightgreen)
 
-**⚠️ BETA STATUS**: This tool is in active testing. Core functionality works but expect bugs and issues. Use with caution on production systems.
+**✅ STABLE RELEASE**: The tool is fully functional and ready for production use. Continued improvements will follow, but core features are tested and reliable.
 
 ## ✨ What's New
 
