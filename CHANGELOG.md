@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2025-06-13 🌐
+
+### 🚀 SMART VHOST AUTO-DISCOVERY & PROGRESS BAR ENHANCEMENTS
+**Major update introducing intelligent virtual host management and enhanced progress tracking for HTB and CTF environments**
+
+### ✨ Added - VHost Auto-Discovery System
+- **🌐 Intelligent VHost Detection**: Detects virtual hosts from HTTP redirects, error pages, and response content
+- **🏠 Smart /etc/hosts Management**: Automatically adds discovered vhosts to `/etc/hosts` during scanning
+- **🎯 HTB Environment Detection**: Auto-enables vhost management when HTB indicators detected
+- **🔐 Permission Management**: Smart sudo detection and privilege escalation for hosts file modification
+- **📋 Automatic Backup**: Creates timestamped backups of `/etc/hosts` before modifications
+- **🔄 Real-Time Addition**: Adds vhosts immediately upon discovery (eliminates 400 errors!)
+- **🛡️ Duplicate Prevention**: Prevents duplicate entries and checks existing hostnames
+- **💡 Manual Fallback**: Provides copy-paste commands when auto-add unavailable
+
+### 🔧 Enhanced - Discovery Methods
+- **VHost Redirect Hunter**: Enhanced to auto-add discovered redirects to `/etc/hosts`
+- **HTTP Response Analysis**: New curl plugin enhancement parsing responses for hostname patterns
+- **Pattern Detection**: Advanced regex patterns for detecting vhosts in:
+  - HTTP redirects and Location headers
+  - HTML titles and content (especially `.htb` domains)
+  - Server error messages and configuration pages
+  - Link href attributes and form actions
+
+### 📊 Enhanced - Progress Bar System
+- **⏱️ Realistic Duration Estimates**: Updated with actual scan times:
+  - Port scans: 15s → 60s (4x more realistic)
+  - Nikto/Gobuster: 8s → 300s (5 minutes for web scans)
+  - Nmap services: 8s → 120s (2 minutes)
+  - Other services: 8s → 60s (1 minute)
+- **📈 Asymptotic Progress Curve**: Continues advancing smoothly past estimated duration
+  - Eliminated "stuck at 90%" issue using exponential decay to approach 98%
+  - Provides realistic progress indication for long-running scans
+- **🎯 Deduplication System**: Prevents multiple progress bars for same scan types
+- **✨ Rich Visual Feedback**: Enhanced display with modern spinners and formatting
+
+### 🎨 Enhanced - User Experience  
+- **🌐 Live VHost Notifications**: Real-time Rich console output when vhosts discovered and added
+- **📋 HTB Optimization**: Perfect integration for HackTheBox machines with `.htb` domains
+- **⚡ Zero Interruption**: Scanning continues seamlessly after vhost discovery
+- **🔍 Debug Information**: Enhanced verbosity levels for troubleshooting
+
+### 🛠️ Technical Improvements
+- **🧮 Mathematical Progress**: Exponential decay formula: `progress = 90% + 8% × (1 - e^(-overtime/60s))`
+- **🔄 Concurrent Processing**: VHost detection runs parallel without performance impact
+- **🛡️ Error Handling**: Robust handling for permission issues and network failures
+- **📁 Code Organization**: New `VHostManager` class with clean separation of concerns
+
+### 🎯 Use Cases
+- **HTB Machines**: Auto-resolves virtual hosts like `furni.htb`, `faculty.htb`, etc.
+- **CTF Challenges**: Handles web applications with hostname-based routing
+- **Enterprise Testing**: Manages complex virtual host configurations
+- **OSCP Preparation**: Streamlined workflow for exam environments
+
+### 💡 Configuration Options
+```toml
+[vhost_discovery]
+enabled = true                    # Enable/disable vhost auto-discovery
+backup_hosts_file = true         # Create backups before modification  
+request_timeout = 10             # HTTP request timeout for discovery
+user_agent = "ipcrawler-vhost-hunter/1.0"  # User agent for requests
+```
+
+### 🚨 Breaking Changes
+- **None**: All changes are backwards compatible and opt-in based on environment detection
+
+---
+
 ## [2.0.2] - 2025-06-13 🔄
 
 ### 🚀 DEVELOPMENT WORKFLOW OVERHAUL

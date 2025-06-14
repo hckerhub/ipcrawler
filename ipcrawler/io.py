@@ -35,7 +35,7 @@ def get_ipcrawler_ascii():
     ⚡ Network Spider - Weaving Through Your Infrastructure ⚡
     """
 
-def show_startup_banner(targets=None, version="2.0.2"):
+def show_startup_banner(targets=None, version="2.1.0"):
 	"""Display feroxbuster-style startup banner"""
 	from ipcrawler.config import config
 	if not RICH_AVAILABLE or config['accessible']:
@@ -812,6 +812,8 @@ class VHostManager:
 			return True
 			
 		import shutil
+		import subprocess
+		import os
 		from datetime import datetime
 		
 		try:
@@ -848,6 +850,7 @@ class VHostManager:
 				
 		try:
 			import subprocess
+			import os
 			from datetime import datetime
 			
 			# Check if entry already exists
