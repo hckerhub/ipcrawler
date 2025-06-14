@@ -2207,6 +2207,10 @@ async def run():
 	# Start progress manager for long scans
 	progress_manager.start()
 	
+	# Initialize VHost auto-discovery system
+	from ipcrawler.io import vhost_manager
+	vhost_manager.check_auto_add_conditions()
+	
 	start_time = time.time()
 
 	if not config['disable_keyboard_control']:

@@ -1,5 +1,6 @@
 from ipcrawler.config import config
 from ipcrawler.plugins import ServiceScan
+from ipcrawler.io import vhost_manager
 import requests
 import urllib3
 import ipaddress
@@ -23,6 +24,11 @@ class VHostRedirectHunter(ServiceScan):
 
     async def run(self, service):
         service.info("🕷️  VHost Redirect Hunter activated - searching for hostname redirects...")
+        
+        # Initialize auto-add system on first run
+        if not hasattr(vhost_manager, 'initialized'):
+            vhost_manager.check_auto_add_conditions()
+            vhost_manager.initialized = True
         
         # Only process IP addresses, not hostnames
         try:
@@ -83,7 +89,15 @@ class VHostRedirectHunter(ServiceScan):
                     service.info(f"✅ VHost discovered: {redirect_host}")
                     service.info(f"   Redirect: {url} → {location}")
                     
-                    # Add to manual commands for easy copy-paste
+                    # **AUTO-ADD TO /etc/hosts** - NEW FUNCTIONALITY!
+                    success = vhost_manager.add_vhost_entry(service.target.address, redirect_host)
+                    if not success and vhost_manager.auto_add_enabled:
+                        service.warn(f"⚠️  Failed to auto-add {redirect_host} to /etc/hosts")
+                    elif not vhost_manager.auto_add_enabled:
+                        # Suggest manual addition if auto-add not enabled
+                        vhost_manager.suggest_manual_add(service.target.address, redirect_host)
+                    
+                    # Add to manual commands for easy copy-paste (fallback)
                     manual_cmd = f"echo '{service.target.address} {redirect_host}' | sudo tee -a /etc/hosts"
                     await service.execute(f'echo "# VHost discovered: {redirect_host}" >> "{service.target.scandir}/_manual_commands.txt"')
                     await service.execute(f'echo "{manual_cmd}" >> "{service.target.scandir}/_manual_commands.txt"')

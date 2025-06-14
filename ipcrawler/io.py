@@ -755,6 +755,161 @@ class ProgressManager:
 # Global progress manager instance
 progress_manager = ProgressManager()
 
+# VHost Auto-Discovery System
+class VHostManager:
+	def __init__(self):
+		self.auto_add_enabled = False
+		self.discovered_hosts = set()
+		self.backup_created = False
+		
+	def check_auto_add_conditions(self):
+		"""Check if we should auto-add vhosts to /etc/hosts"""
+		import os
+		import subprocess
+		
+		# Check if we're root or have sudo access  
+		if os.geteuid() == 0:
+			self.auto_add_enabled = True
+			debug('Auto VHost: Running as root - enabling auto-add', verbosity=2)
+			return True
+			
+		# Check sudo access
+		try:
+			result = subprocess.run(['sudo', '-n', 'true'], 
+								  capture_output=True, timeout=2)
+			if result.returncode == 0:
+				self.auto_add_enabled = True
+				debug('Auto VHost: Sudo access detected - enabling auto-add', verbosity=2)
+				return True
+		except:
+			pass
+			
+		# Check for HTB indicators
+		try:
+			with open('/etc/hosts', 'r') as f:
+				hosts_content = f.read().lower()
+				if any(indicator in hosts_content for indicator in 
+					   ['htb', 'hackthebox', '.htb', 'machine']):
+					# Try sudo for HTB scenarios
+					try:
+						result = subprocess.run(['sudo', '-v'], 
+											  capture_output=True, timeout=5)
+						if result.returncode == 0:
+							self.auto_add_enabled = True
+							info('🎯 HTB environment detected - enabling auto VHost discovery!', verbosity=1)
+							return True
+					except:
+						pass
+		except:
+			pass
+			
+		debug('Auto VHost: Conditions not met - manual mode only', verbosity=2)
+		return False
+		
+	def create_backup(self):
+		"""Create backup of /etc/hosts"""
+		if self.backup_created:
+			return True
+			
+		import shutil
+		from datetime import datetime
+		
+		try:
+			timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+			backup_path = f'/etc/hosts.ipcrawler.backup.{timestamp}'
+			
+			if os.geteuid() == 0:
+				shutil.copy2('/etc/hosts', backup_path)
+			else:
+				subprocess.run(['sudo', 'cp', '/etc/hosts', backup_path], 
+							 check=True, timeout=10)
+							 
+			info(f'📋 Created /etc/hosts backup: {backup_path}', verbosity=2)
+			self.backup_created = True
+			return True
+		except Exception as e:
+			warn(f'⚠️  Could not create hosts backup: {e}', verbosity=1)
+			return False
+			
+	def add_vhost_entry(self, ip, hostname):
+		"""Add a single vhost entry to /etc/hosts"""
+		if not self.auto_add_enabled:
+			return False
+			
+		# Avoid duplicates
+		host_key = f"{ip}:{hostname}"
+		if host_key in self.discovered_hosts:
+			return True
+			
+		# Create backup on first addition
+		if not self.backup_created:
+			if not self.create_backup():
+				return False
+				
+		try:
+			import subprocess
+			from datetime import datetime
+			
+			# Check if entry already exists
+			try:
+				with open('/etc/hosts', 'r') as f:
+					content = f.read()
+					if hostname in content:
+						debug(f'VHost {hostname} already in hosts file', verbosity=2)
+						self.discovered_hosts.add(host_key)
+						return True
+			except:
+				pass
+				
+			# Add the entry
+			entry = f"\n# Added by ipcrawler - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n{ip} {hostname}\n"
+			
+			if os.geteuid() == 0:
+				with open('/etc/hosts', 'a') as f:
+					f.write(entry)
+			else:
+				process = subprocess.Popen(['sudo', 'tee', '-a', '/etc/hosts'], 
+										 stdin=subprocess.PIPE, 
+										 stdout=subprocess.DEVNULL,
+										 stderr=subprocess.PIPE, text=True)
+				process.communicate(input=entry)
+				
+				if process.returncode != 0:
+					return False
+					
+			self.discovered_hosts.add(host_key)
+			info(f'✅ Auto-added to /etc/hosts: {ip} {hostname}', verbosity=1)
+			
+			# Also show in Rich if available
+			if RICH_AVAILABLE and not config.get('accessible', False):
+				from rich.text import Text
+				vhost_text = Text.assemble(
+					("GET", "bold blue"),
+					"    ",
+					("200", "bold green"), 
+					"    ",
+					("🌐 VHOST ADDED", "bold magenta"),
+					" ",
+					(f"{hostname}", "cyan"),
+					(" → ", "dim"),
+					(f"{ip}", "yellow")
+				)
+				rich_console.print(vhost_text)
+				
+			return True
+			
+		except Exception as e:
+			warn(f'❌ Failed to add VHost {hostname}: {e}', verbosity=1)
+			return False
+			
+	def suggest_manual_add(self, ip, hostname):
+		"""Suggest manual command for adding vhost"""
+		manual_cmd = f'echo "{ip} {hostname}" | sudo tee -a /etc/hosts'
+		info(f'💡 Manual VHost add: {manual_cmd}', verbosity=1)
+
+# Global VHost manager instance
+vhost_manager = VHostManager()
+
 class CommandStreamReader(object):
 
 	def __init__(self, stream, target, tag, patterns=None, outfile=None):
