@@ -6,6 +6,17 @@
 
 ## 🚀 Quick Start
 
+### 🎥 Video Tutorials
+
+<div align="center">
+
+| **🐧 HTB Local Setup** | **🍎 Docker on macOS** |
+|:--:|:--:|
+| <a href="https://youtu.be/lBXAzpUrtlw" target="_blank"><img src="https://img.youtube.com/vi/lBXAzpUrtlw/maxresdefault.jpg" alt="HTB Setup" width="400"></a> | <a href="https://youtu.be/i6Y5Rn0--kA" target="_blank"><img src="https://img.youtube.com/vi/i6Y5Rn0--kA/maxresdefault.jpg" alt="macOS Setup" width="400"></a> |
+| **Complete setup on HTB machines** | **Docker installation & usage on macOS** |
+
+</div>
+
 ### 🐧 Linux/macOS (Recommended)
 ```bash
 git clone https://github.com/neur0map/ipcrawler.git
