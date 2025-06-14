@@ -1,4 +1,4 @@
-import asyncio, colorama, os, re, string, sys, unidecode, time
+import asyncio, colorama, os, re, string, sys, unidecode, time, math
 from colorama import Fore, Style
 from ipcrawler.config import config
 
@@ -534,126 +534,223 @@ def show_scan_summary(target_count, total_time, findings_count=0):
 	rich_console.print(summary_panel)
 
 class ProgressManager:
-	"""Manages progress bars for long-running scans"""
-	
 	def __init__(self):
-		self.progress = None
-		self.tasks = {}
 		self.active = False
+		self.tasks = {}
+		self.task_keys = {}  # Track existing progress bars by unique key
+		self.progress = None
+		self.live = None
 	
 	def start(self):
 		"""Start the progress manager"""
-		if not RICH_AVAILABLE or config['accessible']:
-			return
-			
-		self.progress = Progress(
-			SpinnerColumn(),
-			TextColumn("[progress.description]{task.description}"),
-			BarColumn(),
-			TaskProgressColumn(),
-			TimeElapsedColumn(),
-			console=rich_console,
-			transient=True  # Make it disappear when complete
-		)
-		self.progress.start()
-		self.active = True
+		debug(f'ProgressManager.start() called - RICH_AVAILABLE: {RICH_AVAILABLE}, accessible: {config.get("accessible", False)}', verbosity=3)
+		
+		if RICH_AVAILABLE and not config.get("accessible", False):
+			# Use modern Rich progress bars with live updates
+			self.progress = Progress(
+				SpinnerColumn(spinner_name="dots", style="cyan", speed=1.0),
+				TextColumn("[bold blue]{task.description}"),
+				BarColumn(bar_width=40, style="cyan", complete_style="green"),
+				TaskProgressColumn(style="bold magenta"),
+				TimeElapsedColumn(),
+				console=rich_console,
+				transient=True  # Progress bars disappear when complete
+			)
+			self.live = Live(self.progress, console=rich_console, refresh_per_second=10)
+			self.live.start()
+			self.active = True
+			debug('Progress manager started successfully (Rich mode)', verbosity=3)
+		else:
+			# Fallback to simple text-based progress
+			self.active = True
+			debug('Progress manager started successfully (text mode)', verbosity=3)
 	
-	def add_task(self, description, total=100):
-		"""Add a new progress task"""
+	def add_task(self, description, total=100, task_key=None):
+		"""Add a new progress task, or reuse existing one if task_key matches"""
+		debug(f'add_task called: {description}, active: {self.active}, task_key: {task_key}', verbosity=3)
 		if not self.active:
+			debug('Progress manager not active, returning None', verbosity=3)
 			return None
-		task_id = self.progress.add_task(description, total=total)
-		self.tasks[task_id] = {'started': time.time(), 'total': total}
+		
+		# Check if we already have a task with this key
+		if task_key and task_key in self.task_keys:
+			existing_task_id = self.task_keys[task_key]
+			debug(f'🔄 Reusing existing progress bar {existing_task_id} for {task_key}', verbosity=2)
+			return existing_task_id
+		
+		if self.progress:
+			# Use Rich progress bar
+			task_id = self.progress.add_task(description, total=total)
+			self.tasks[task_id] = {
+				'description': description,
+				'started': time.time(), 
+				'total': total,
+				'completed': 0,
+				'last_update': time.time(),
+				'rich_task': True,
+				'task_key': task_key
+			}
+			# Store the mapping if we have a key
+			if task_key:
+				self.task_keys[task_key] = task_id
+			debug(f'Rich task {task_id} created: {description}', verbosity=3)
+		else:
+			# Fallback to simple tracking
+			task_id = len(self.tasks) + 1
+			self.tasks[task_id] = {
+				'description': description,
+				'started': time.time(), 
+				'total': total,
+				'completed': 0,
+				'last_update': time.time(),
+				'rich_task': False,
+				'task_key': task_key
+			}
+			# Store the mapping if we have a key
+			if task_key:
+				self.task_keys[task_key] = task_id
+			info(f'🚀 Started: {description}', verbosity=2)
+			debug(f'Text task {task_id} created: {description}', verbosity=3)
+		
 		return task_id
 	
 	def update_task(self, task_id, advance=1):
 		"""Update progress on a task"""
-		if not self.active or task_id is None:
+		if not self.active or task_id is None or task_id not in self.tasks:
 			return
-		self.progress.update(task_id, advance=advance)
 		
-		# If we've completed the task, remove it after a moment
-		if task_id in self.tasks:
-			current = self.progress.tasks[task_id].completed + advance
-			if current >= self.tasks[task_id]['total']:
-				# Mark as complete and schedule removal
-				import asyncio
-				asyncio.create_task(self._remove_task_after_delay(task_id))
+		self.tasks[task_id]['completed'] += advance
+		self.tasks[task_id]['last_update'] = time.time()
+		
+		if self.tasks[task_id].get('rich_task', False) and self.progress:
+			# Update Rich progress bar
+			self.progress.update(task_id, advance=advance)
+		else:
+			# Show text progress update occasionally
+			if self.tasks[task_id]['completed'] % 20 == 0:  # Every 20%
+				progress_percent = min(100, self.tasks[task_id]['completed'])
+				info(f'⏳ Progress: {self.tasks[task_id]["description"]} - {progress_percent:.0f}%', verbosity=2)
 	
 	def complete_task(self, task_id):
-		"""Complete a task by setting it to 100%"""
-		if not self.active or task_id is None:
+		"""Complete a task and schedule its removal"""
+		if not self.active or task_id is None or task_id not in self.tasks:
 			return
 		
-		if task_id in self.tasks:
-			current_progress = self.progress.tasks[task_id].completed
-			total = self.tasks[task_id]['total']
-			remaining = total - current_progress
-			
-			if remaining > 0:
-				self.progress.update(task_id, advance=remaining)
-			
-			# Schedule removal
-			import asyncio
-			asyncio.create_task(self._remove_task_after_delay(task_id))
+		task = self.tasks[task_id]
+		
+		# Check if task was already completed
+		if task.get('completed_flag', False):
+			debug(f'Task {task_id} already completed, skipping', verbosity=3)
+			return
+		
+		# Mark as completed to prevent duplicate completion
+		task['completed_flag'] = True
+		elapsed = time.time() - task['started']
+		
+		if task.get('rich_task', False) and self.progress:
+			# Complete Rich progress bar
+			self.progress.update(task_id, completed=task['total'])
+			# Let Rich handle the completion display
+		else:
+			# Show text completion message
+			info(f'✅ Completed: {task["description"]} (took {elapsed:.1f}s)', verbosity=2)
+		
+		# Schedule removal
+		asyncio.create_task(self._remove_task_after_delay(task_id))
 	
 	async def _remove_task_after_delay(self, task_id, delay=2):
 		"""Remove completed task after delay"""
 		await asyncio.sleep(delay)
 		if self.active and task_id in self.tasks:
-			try:
-				self.progress.remove_task(task_id)
-				del self.tasks[task_id]
-			except:
-				pass  # Task might already be removed
+			task = self.tasks[task_id]
+			
+			# Remove from Rich progress if it's a Rich task
+			if task.get('rich_task', False) and self.progress:
+				try:
+					self.progress.remove_task(task_id)
+				except:
+					pass  # Task might already be removed
+			
+			# Remove from task_keys mapping if it has a key
+			task_key = task.get('task_key')
+			if task_key and task_key in self.task_keys:
+				del self.task_keys[task_key]
+			
+			# Remove from our internal tracking
+			del self.tasks[task_id]
 	
 	def simulate_progress(self, task_id, duration=10):
 		"""Simulate progress for long-running tasks"""
-		if not self.active or task_id is None:
+		if not self.active or task_id is None or task_id not in self.tasks:
 			return
 		
 		# Update progress gradually during the scan
-		import asyncio
 		asyncio.create_task(self._progress_updater(task_id, duration))
 	
 	async def _progress_updater(self, task_id, duration):
 		"""Gradually update progress over duration"""
-		if task_id not in self.tasks:
+		if not self.active or task_id not in self.tasks:
 			return
 			
 		start_time = time.time()
-		while time.time() - start_time < duration and self.active:
+		update_count = 0
+		last_progress_report = 0
+		task = self.tasks[task_id]
+		
+		while self.active:
 			try:
 				# Check if task still exists before accessing it
 				if task_id not in self.tasks:
 					break
 					
 				elapsed = time.time() - start_time
-				progress_percent = min(90, (elapsed / duration) * 90)  # Max 90% until completion
 				
-				# Safely get current progress
-				try:
-					current_progress = self.progress.tasks[task_id].completed
-				except (KeyError, IndexError):
-					# Task was removed, exit gracefully
-					break
+				# More realistic progress curve that approaches 100% asymptotically
+				if elapsed < duration:
+					# Normal progress up to 90% within estimated duration
+					progress_percent = min(90, (elapsed / duration) * 90)
+				else:
+					# After estimated duration, slowly approach 95-98% but never 100%
+					overtime = elapsed - duration
+					# Asymptotic approach: starts at 90%, slowly approaches 98%
+					progress_percent = 90 + (8 * (1 - math.exp(-overtime / 60)))  # 60s time constant
+				
+				if task.get('rich_task', False) and self.progress:
+					# Update Rich progress bar
+					progress_value = (progress_percent / 100) * task['total']
+					self.progress.update(task_id, completed=progress_value)
+				else:
+					# Update our internal tracking for text mode
+					self.tasks[task_id]['completed'] = progress_percent
+					self.tasks[task_id]['last_update'] = time.time()
 					
-				advance_amount = max(0, progress_percent - current_progress)
+					# Show progress updates every 30% or so
+					if progress_percent - last_progress_report >= 30:
+						info(f'⏳ Progress: {self.tasks[task_id]["description"]} - {progress_percent:.0f}%', verbosity=2)
+						last_progress_report = progress_percent
+						update_count += 1
 				
-				if advance_amount > 0:
-					self.progress.update(task_id, advance=advance_amount)
-			except Exception:
-				# If any error occurs, exit gracefully
+			except Exception as e:
+				debug(f'Progress updater error for task {task_id}: {e}', verbosity=3)
 				break
 			
-			await asyncio.sleep(0.5)  # Update every half second
+			await asyncio.sleep(1.0)  # Update every second
 	
 	def stop(self):
 		"""Stop the progress manager"""
-		if self.active and self.progress:
-			self.progress.stop()
+		if self.active:
 			self.active = False
+			
+			# Stop Rich live display
+			if self.live:
+				self.live.stop()
+				self.live = None
+			
+			# Clear progress, tasks, and task keys
+			self.progress = None
 			self.tasks.clear()
+			self.task_keys.clear()
+			debug('Progress manager stopped', verbosity=3)
 
 # Global progress manager instance
 progress_manager = ProgressManager()

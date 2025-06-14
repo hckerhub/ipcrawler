@@ -554,6 +554,46 @@ async def start_heartbeat(target, period=60):
 	while True:
 		await asyncio.sleep(period)
 		async with target.lock:
+			# Clean up completed tasks that may have been missed
+			completed_tasks = []
+			for tag, task in list(target.running_tasks.items()):  # Use list() to avoid dict size change during iteration
+				try:
+					# Check if all processes are completed
+					all_processes_done = True
+					active_processes = 0
+					
+					for process_dict in task['processes']:
+						if process_dict['process'].returncode is None:
+							all_processes_done = False
+							active_processes += 1
+					
+					# If no processes or all processes are done, mark for cleanup
+					if not task['processes'] or all_processes_done:
+						# Check if this task has been running for a long time without processes
+						elapsed = time.time() - task['start']
+						if elapsed > 60:  # 1 minute without active processes (reduced from 3)
+							completed_tasks.append(tag)
+					# Also clean up tasks that have been stuck with 0 active processes for too long
+					elif active_processes == 0:
+						elapsed = time.time() - task['start']
+						if elapsed > 30:  # 30 seconds with no active processes (reduced from 2 minutes)
+							completed_tasks.append(tag)
+				except Exception:
+					# If any error accessing task data, mark for cleanup
+					completed_tasks.append(tag)
+			
+			# Remove completed tasks and their progress bars
+			for tag in completed_tasks:
+				if tag in target.running_tasks:
+					# Complete the progress bar if it exists
+					try:
+						if 'progress_task' in target.running_tasks[tag] and target.running_tasks[tag]['progress_task']:
+							progress_manager.complete_task(target.running_tasks[tag]['progress_task'])
+					except Exception:
+						pass  # Ignore errors in progress cleanup
+					target.running_tasks.pop(tag, None)
+					warn(f'Cleaned up stale task: {tag}', verbosity=2)
+			
 			count = len(target.running_tasks)
 
 			if config['verbose'] >= 1:
@@ -712,11 +752,12 @@ async def port_scan(plugin, target):
 	async with target.ipcrawler.port_scan_semaphore:
 		info('Port scan {bblue}' + plugin.name + ' {green}(' + plugin.slug + '){rst} running against {byellow}' + target.address + '{rst}', verbosity=1)
 
-		# Add progress bar for port scans
-		task_id = progress_manager.add_task(f"🔍 Scanning {plugin.name} on {target.address}", total=100)
+		# Add progress bar for port scans (with deduplication key)
+		task_key = f"port_scan_{plugin.slug}_{target.address}"
+		task_id = progress_manager.add_task(f"🔍 Scanning {plugin.name} on {target.address}", total=100, task_key=task_key)
 		
-		# Start progress simulation (estimate 15 seconds for port scan)
-		progress_manager.simulate_progress(task_id, 15)
+		# Start progress simulation (more realistic estimate: 60 seconds for port scan)
+		progress_manager.simulate_progress(task_id, 60)
 		
 		start_time = time.time()
 
@@ -726,6 +767,13 @@ async def port_scan(plugin, target):
 		try:
 			result = await plugin.run(target)
 		except Exception as ex:
+			# Clean up task on exception
+			if task_id:
+				progress_manager.complete_task(task_id)
+			async with target.lock:
+				if plugin.slug in target.running_tasks:
+					target.running_tasks.pop(plugin.slug, None)
+			
 			exc_type, exc_value, exc_tb = sys.exc_info()
 			error_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb)[-2:])
 			raise Exception(cprint('Error: Port scan {bblue}' + plugin.name + ' {green}(' + plugin.slug + '){rst} running against {byellow}' + target.address + '{rst} produced an exception:\n\n' + error_text, color=Fore.RED, char='!', printmsg=False))
@@ -755,12 +803,14 @@ async def port_scan(plugin, target):
 
 		elapsed_time = calculate_elapsed_time(start_time)
 
-		# Complete progress bar
+		# Complete progress bar and cleanup tasks
 		if task_id:
 			progress_manager.complete_task(task_id)
 
 		async with target.lock:
-			target.running_tasks.pop(plugin.slug, None)
+			# Ensure task is removed from running_tasks
+			if plugin.slug in target.running_tasks:
+				target.running_tasks.pop(plugin.slug, None)
 
 		info('Port scan {bblue}' + plugin.name + ' {green}(' + plugin.slug + '){rst} against {byellow}' + target.address + '{rst} finished in ' + elapsed_time, verbosity=2)
 		return {'type':'port', 'plugin':plugin, 'result':result}
@@ -846,11 +896,19 @@ async def service_scan(plugin, service):
 
 			info('Service scan {bblue}' + plugin.name + ' {green}(' + tag + '){rst} running against {byellow}' + service.target.address + '{rst}', verbosity=1)
 
-			# Add progress bar for service scans
-			task_id = progress_manager.add_task(f"🔧 {plugin.name} on {service.target.address}:{service.port}", total=100)
+			# Add progress bar for service scans (with deduplication key)
+			task_key = f"service_scan_{plugin.slug}_{service.target.address}_{service.port}"
+			task_id = progress_manager.add_task(f"🔧 {plugin.name} on {service.target.address}:{service.port}", total=100, task_key=task_key)
 
-			# Start progress simulation (estimate 8 seconds for service scan)
-			progress_manager.simulate_progress(task_id, 8)
+			# Start progress simulation (estimate varies by service type)
+			# Nikto and directory busters take longer
+			if 'nikto' in plugin.slug.lower() or 'gobuster' in plugin.slug.lower() or 'dirb' in plugin.slug.lower():
+				estimated_duration = 300  # 5 minutes for directory/web scans  
+			elif 'nmap' in plugin.slug.lower():
+				estimated_duration = 120  # 2 minutes for nmap scans
+			else:
+				estimated_duration = 60   # 1 minute for other scans
+			progress_manager.simulate_progress(task_id, estimated_duration)
 
 			start_time = time.time()
 
@@ -860,6 +918,13 @@ async def service_scan(plugin, service):
 			try:
 				result = await plugin.run(service)
 			except Exception as ex:
+				# Clean up task on exception
+				if task_id:
+					progress_manager.complete_task(task_id)
+				async with service.target.lock:
+					if tag in service.target.running_tasks:
+						service.target.running_tasks.pop(tag, None)
+				
 				exc_type, exc_value, exc_tb = sys.exc_info()
 				error_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb)[-2:])
 				raise Exception(cprint('Error: Service scan {bblue}' + plugin.name + ' {green}(' + tag + '){rst} running against {byellow}' + service.target.address + '{rst} produced an exception:\n\n' + error_text, color=Fore.RED, char='!', printmsg=False))
@@ -869,7 +934,7 @@ async def service_scan(plugin, service):
 					warn('A process was left running after service scan {bblue}' + plugin.name + ' {green}(' + tag + '){rst} against {byellow}' + service.target.address + '{rst} finished. Please ensure non-blocking processes are awaited before the run coroutine finishes. Awaiting now.', verbosity=2)
 					await process_dict['process'].wait()
 
-				if process_dict['process'].returncode != 0 and not (process_dict['cmd'].startswith('curl') and process_dict['process'].returncode == 22):
+				if process_dict['process'].returncode != 0 and not (process_dict['cmd'].startswith('curl') and process_dict['process'].returncode in [22, 56]):
 					errors = []
 					while True:
 						line = await process_dict['stderr'].readline()
@@ -889,12 +954,14 @@ async def service_scan(plugin, service):
 
 			elapsed_time = calculate_elapsed_time(start_time)
 
-			# Complete progress bar
+			# Complete progress bar and cleanup tasks
 			if task_id:
 				progress_manager.complete_task(task_id)
 
 			async with service.target.lock:
-				service.target.running_tasks.pop(tag, None)
+				# Ensure task is removed from running_tasks
+				if tag in service.target.running_tasks:
+					service.target.running_tasks.pop(tag, None)
 
 			info('Service scan {bblue}' + plugin.name + ' {green}(' + tag + '){rst} against {byellow}' + service.target.address + '{rst} finished in ' + elapsed_time, verbosity=2)
 			return {'type':'service', 'plugin':plugin, 'result':result}
@@ -1025,13 +1092,14 @@ async def scan_target(target):
 				break
 
 		if not config['force_services']:
-			# Extract Services
+			# Extract Services - only from newly completed tasks
 			services = []
 
 			async with target.lock:
 				while target.pending_services:
 					services.append(target.pending_services.pop(0))
 
+			# Only process services from tasks that just completed in this iteration
 			for task in done:
 				try:
 					if task.exception():
@@ -1040,14 +1108,18 @@ async def scan_target(target):
 				except asyncio.InvalidStateError:
 					pass
 
-				if task.result()['type'] == 'port':
+				if task.result() and task.result()['type'] == 'port':
 					for service in (task.result()['result'] or []):
-						services.append(service)
+						# Only add service if not already processed
+						if service.full_tag() not in target.services:
+							services.append(service)
 
 		for service in services:
+			# Double-check service hasn't been processed (race condition protection)
 			if service.full_tag() not in target.services:
 				target.services.append(service.full_tag())
 			else:
+				# Service already processed, skip entirely
 				continue
 
 			info('Identified service {bmagenta}' + service.name + '{rst} on {bmagenta}' + service.protocol + '/' + str(service.port) + '{rst} on {byellow}' + target.address + '{rst}', verbosity=1)
@@ -1225,13 +1297,33 @@ async def scan_target(target):
 				if plugin.run_once_boolean:
 					plugin_tag = plugin.slug
 
+				# Check if plugin already queued for this specific service or globally (for run_once plugins)
 				plugin_queued = False
-				if service in target.scans['services']:
+				
+				# For run_once plugins, check if already queued globally across all services
+				if plugin.run_once_boolean:
 					for s in target.scans['services']:
-						if plugin_tag in target.scans['services'][s]:
+						if plugin.slug in target.scans['services'][s]:
 							plugin_queued = True
-							warn('{byellow}[' + plugin_tag + ' against ' + target.address + ']{srst} Plugin appears to have already been queued, but it is not marked as run_once. Possible duplicate service tag? Skipping.{rst}', verbosity=2)
+							warn('{byellow}[' + plugin_tag + ' against ' + target.address + ']{srst} Plugin is marked as run_once and appears to have already been queued. Skipping.{rst}', verbosity=2)
 							break
+					# Also check if already in running_tasks
+					if not plugin_queued:
+						async with target.lock:
+							if plugin.slug in target.running_tasks:
+								plugin_queued = True
+								warn('{byellow}[' + plugin_tag + ' against ' + target.address + ']{srst} Plugin is marked as run_once and is already running. Skipping.{rst}', verbosity=2)
+				else:
+					# For regular plugins, check if already queued for this specific service
+					if service in target.scans['services'] and plugin_tag in target.scans['services'][service]:
+						plugin_queued = True
+						warn('{byellow}[' + plugin_tag + ' against ' + target.address + ']{srst} Plugin appears to have already been queued for this service. Skipping.{rst}', verbosity=2)
+					# Also check if already in running_tasks
+					if not plugin_queued:
+						async with target.lock:
+							if plugin_tag in target.running_tasks:
+								plugin_queued = True
+								warn('{byellow}[' + plugin_tag + ' against ' + target.address + ']{srst} Plugin is already running for this service. Skipping.{rst}', verbosity=2)
 
 				if plugin_queued:
 					continue
