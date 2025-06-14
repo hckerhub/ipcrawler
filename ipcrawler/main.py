@@ -2328,6 +2328,7 @@ async def run():
 		if config.get('vhost_discovery', {}).get('enabled', True):
 			try:
 				from ipcrawler.vhost_post_processor import VHostPostProcessor
+				from ipcrawler.io import vhost_manager
 				
 				# Check if any VHost files were created and collect all scan directories
 				vhost_files_found = False
@@ -2339,11 +2340,23 @@ async def run():
 						if any(f.startswith('vhost_redirects_') and f.endswith('.txt') for f in files):
 							vhost_files_found = True
 				
-				if vhost_files_found:
-					info('{bright}🌐 Running VHost Discovery Post-Processing...{rst}')
+				# Run post-processing if:
+				# 1. VHost files were found AND
+				# 2. Auto-add was disabled in config OR auto-add failed due to no privileges
+				vhost_config = config.get('vhost_discovery', {})
+				auto_add_setting = vhost_config.get('auto_add_hosts', True)
+				
+				if vhost_files_found and (not auto_add_setting or not vhost_manager.auto_add_enabled):
+					if not auto_add_setting:
+						info('{bright}🌐 Running VHost Discovery Post-Processing (auto-add disabled)...{rst}')
+					else:
+						info('{bright}🌐 Running VHost Discovery Post-Processing (no privileges for auto-add)...{rst}')
+					
 					# Pass all scan directories to the processor
 					processor = VHostPostProcessor(scan_directories)
 					processor.run_interactive_session()
+				elif vhost_files_found and auto_add_setting and vhost_manager.auto_add_enabled:
+					info('{bright}🌐 VHosts discovered and auto-added during scanning. Check /etc/hosts for entries.{rst}')
 				
 			except ImportError:
 				warn('VHost post-processor not available. Skipping VHost management.')

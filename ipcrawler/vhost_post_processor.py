@@ -221,14 +221,8 @@ class VHostPostProcessor:
                 print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
             return
         
-        # Check if auto-add is enabled
-        auto_add = vhost_config.get('auto_add_hosts', True)
-        
-        if not auto_add:
-            print("\n📝 Auto-add disabled in config. Manual commands available:")
-            for vhost in new_vhosts:
-                print(f"echo '{vhost['ip']} {vhost['hostname']}' | sudo tee -a /etc/hosts")
-            return
+        # Note: We always show interactive prompts when post-processor is called
+        # The main.py logic already handles the auto_add_hosts config check
             
         # Interactive prompt
         print(f"\n🤔 Add {len(new_vhosts)} new VHost(s) to /etc/hosts?")

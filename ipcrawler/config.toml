@@ -1,73 +1,57 @@
-# Configure regular ipcrawler options at the top of this file.
+# ========================================
+# ipcrawler Configuration File
+# ========================================
+# 
+# 💡 To see all available plugins and their tags:
+#    Run: ipcrawler --list
+#
+# For detailed help and examples:
+#    Run: ipcrawler --help-all
+# ========================================
 
-# nmap-append = '-T3'
-# verbose = 1
-# max-scans = 30
+# Uncomment and modify these basic settings as needed:
+# nmap-append = '-T3'          # Add custom nmap options
+# verbose = 1                  # Verbosity level (0-3)
+# max-scans = 30              # Maximum concurrent scans
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PLUGIN SELECTION - Controls which security scanning tools run automatically
-# ═══════════════════════════════════════════════════════════════════════════════
+# ========================================
+# Plugin Selection
+# ========================================
+# Controls which scanning tools run automatically
+# 
+# Examples:
+#   tags = 'default'              # Run all standard tools (slow + fast)
+#   tags = 'default+safe+quick'   # Only fast, safe tools  
+#   tags = 'default+safe'         # Safe tools only
+#   tags = 'default-long'         # Exclude slow tools like directory busting
 #
-# WHAT ARE TAGS?
-# Each scanning tool (plugin) has "tags" that describe what it does:
-# - 'default' = standard reconnaissance tools
-# - 'safe' = won't crash services or trigger alerts  
-# - 'quick' = finishes in seconds/minutes
-# - 'long' = takes minutes/hours (directory busting, subdomain enum, etc.)
-# - 'unsafe' = might crash services or be very noisy
-#
-# HOW TAG SELECTION WORKS:
-# tags = 'default' → Runs ALL default tools (fast + slow + bruteforce)
-# tags = 'default+safe+quick' → Only tools that are default AND safe AND quick
-#
-# CURRENT SETTING EXCLUDES THESE SLOW/NOISY TOOLS:
-# ❌ dirbuster (directory/file bruteforcing - can take hours)
-# ❌ nikto (web vulnerability scanner - very noisy, takes long)
-# ❌ subdomain enumeration (DNS bruteforcing - takes long)
-# ❌ password bruteforce tools (FTP, SSH, RDP, HTTP - noisy & slow)
-# ❌ comprehensive port scans (all 65K ports - very slow)
-#
-# CURRENT SETTING INCLUDES THESE FAST TOOLS:
-# ✅ nmap service detection (identifies what's running on ports)
-# ✅ basic web scans (curl, whatweb - quick banner grabbing)
-# ✅ database checks (mysql, oracle, mssql - just connection tests)
-# ✅ network service scans (smtp, ftp, ssh - just identification)
-#
-# TO CHANGE BACK TO EVERYTHING: Change line below to: tags = 'default'
-# TO RUN ONLY SAFEST TOOLS: Change line below to: tags = 'default+safe'
-# ═══════════════════════════════════════════════════════════════════════════════
 tags = 'default'
-# ═══════════════════════════════════════════════════════════════════════════════
 
-# Configure VHost discovery options
+# ========================================
+# Virtual Host Discovery
+# ========================================
 [vhost_discovery]
-# Enable automatic VHost discovery via HTTP redirects
-enabled = true
+enabled = true                   # Enable VHost discovery
+interactive_mode = true          # Allow user prompts (disable for automation)
+auto_add_hosts = true           # Auto-add to /etc/hosts if root/sudo, otherwise prompt
+request_timeout = 10            # HTTP request timeout (seconds)
+backup_hosts_file = true        # Backup /etc/hosts before changes
 
-# Enable interactive prompts for /etc/hosts modification (set to false for non-interactive environments)
-interactive_mode = true
+# ========================================
+# Plugin-Specific Options
+# ========================================
+# Uncomment sections below to customize specific tools:
 
-# Automatically prompt to add discovered VHosts to /etc/hosts after scan
-auto_add_hosts = true
-
-# Request timeout for VHost discovery (seconds)
-request_timeout = 10
-
-# User agent for VHost discovery requests
-user_agent = "ipcrawler-vhost-hunter/1.0"
-
-# Backup /etc/hosts before making changes
-backup_hosts_file = true
-
-# Configure global options here.
 # [global]
-# username-wordlist = '/usr/share/seclists/Usernames/cirt-default-usernames.txt'
+# username-wordlist = '/usr/share/seclists/Usernames/top-usernames-shortlist.txt'
+# password-wordlist = '/usr/share/seclists/Passwords/darkweb2017-top100.txt'
+# domain = 'example.com'         # Domain for DNS/AD enumeration
 
-# Configure plugin options here.
 # [dirbuster]
-# threads = 50
-# wordlist = [
-# 	'/usr/share/seclists/Discovery/Web-Content/common.txt',
-# 	'/usr/share/seclists/Discovery/Web-Content/big.txt',
-# 	'/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt'
-# ]
+# threads = 50                   # Number of threads
+# wordlist = ['/usr/share/seclists/Discovery/Web-Content/common.txt']
+
+# [nikto] 
+# threads = 10                   # Number of threads
+
+# Run 'ipcrawler --help' for all available options

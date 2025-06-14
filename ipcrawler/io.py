@@ -767,6 +767,13 @@ class VHostManager:
 		import os
 		import subprocess
 		
+		# First check config file setting - if disabled, skip auto-add and use post-scan prompts
+		vhost_config = config.get('vhost_discovery', {})
+		if not vhost_config.get('auto_add_hosts', True):
+			debug('Auto VHost: Disabled in config.toml - will use post-scan interactive prompts', verbosity=2)
+			self.auto_add_enabled = False
+			return False
+		
 		# Check if we're root or have sudo access  
 		if os.geteuid() == 0:
 			self.auto_add_enabled = True
